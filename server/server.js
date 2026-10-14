@@ -28,7 +28,7 @@ const UI = path.join(ROOT, 'ui');
 for (const d of [DATA, SNAPS, SCREENS]) fs.mkdirSync(d, { recursive: true });
 
 const db = openDb(DATA);
-const VERSION = '0.2.1';
+const VERSION = '0.3.0';
 
 // ---------- helpers ----------
 const MIME = {
@@ -109,6 +109,12 @@ function getItem(id) {
     LEFT JOIN collections c ON c.id = i.collection_id WHERE i.id = ?`).get(id);
   if (item) item.tags = tagsOf(id);
   return item;
+}
+
+// Version of the extension files shipped next to the app. The browser extension compares it
+// with its own version and reloads itself after an update.
+function installedExtensionVersion() {
+  try { return JSON.parse(fs.readFileSync(path.join(ROOT, 'extension', 'manifest.json'), 'utf8')).version; } catch { return null; }
 }
 
 function removeFiles(item) {
@@ -254,7 +260,7 @@ async function api(req, res, url) {
   const id = m ? Number(m[1]) : null;
   const sub = m?.[2];
 
-  if (p === '/api/health') return send(res, 200, { ok: true, app: 'TabMind', version: VERSION, data: DATA });
+  if (p === '/api/health') return send(res, 200, { ok: true, app: 'TabMind', version: VERSION, data: DATA, extVersion: installedExtensionVersion() });
   if (p === '/api/facets' && req.method === 'GET') return facets(res);
   if (p === '/api/items' && req.method === 'GET') return listItems(res, url.searchParams);
   if (p === '/api/items' && req.method === 'POST') return saveItem(req, res);

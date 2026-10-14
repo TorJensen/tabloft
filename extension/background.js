@@ -271,3 +271,32 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     }).catch(e => console.warn(e));
   }
 });
+
+// ---------- self-update ----------
+// The installer replaces this extension's files on disk, but browsers only pick up an
+// unpacked extension's new files when it reloads. The server reports the version it
+// shipped; if that is newer than what's running, reload once (never mid-save).
+const newer = (a, b) => {
+  const pa = String(a).split('.').map(Number), pb = String(b).split('.').map(Number);
+  for (let i = 0; i < 3; i++) if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) > (pb[i] || 0);
+  return false;
+};
+
+async function checkExtensionUpdate() {
+  if (running) return;
+  try {
+    const h = await api('/api/health');
+    const mine = chrome.runtime.getManifest().version;
+    if (!h.extVersion || !newer(h.extVersion, mine)) return;
+    // Guard against a reload loop if this copy was loaded from a different folder than the installed one.
+    const { reloadedFor } = await chrome.storage.local.get('reloadedFor');
+    if (reloadedFor === h.extVersion) return;
+    await chrome.storage.local.set({ reloadedFor: h.extVersion });
+    chrome.runtime.reload();
+  } catch { /* server not running */ }
+}
+
+chrome.alarms.create('tabmind-update', { periodInMinutes: 15 });
+chrome.alarms.onAlarm.addListener(a => { if (a.name === 'tabmind-update') checkExtensionUpdate(); });
+chrome.runtime.onStartup.addListener(checkExtensionUpdate);
+checkExtensionUpdate();

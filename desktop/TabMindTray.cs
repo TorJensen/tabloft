@@ -1,29 +1,37 @@
 // TabMind tray app: starts the local TabMind server (tabmind-server.exe) hidden,
-// shows a tray icon, and offers Open library / browser setup / start at login / quit.
+// shows a tray icon, and offers Open library / browser setup / start at login / updates / quit.
+// Updates: checks GitHub Releases of TorJensen/tabmind and installs a newer TabMind-Setup-*.exe.
 // Compiled with the C# compiler that ships with Windows (.NET Framework 4) - see build/build.ps1.
 //
 //   TabMind.exe                     start (if needed) and open the library
 //   TabMind.exe --background        start without opening the library (used at login)
 //   TabMind.exe --setup-extension   open each browser's Extensions page to add TabMind
+//   TabMind.exe --update            check now and install a newer version without asking
 
 using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Web.Script.Serialization;
 using System.Threading;
 using System.Windows.Forms;
 using Microsoft.Win32;
 
 [assembly: System.Reflection.AssemblyTitle("TabMind")]
 [assembly: System.Reflection.AssemblyProduct("TabMind")]
-[assembly: System.Reflection.AssemblyVersion("0.2.1.0")]
+[assembly: System.Reflection.AssemblyVersion("0.3.0.0")]
 
 static class TabMindTray
 {
     const string Url = "http://127.0.0.1:7878";
     const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
+    const string SettingsKey = @"Software\TabMind";
+    const string ReleasesApi = "https://api.github.com/repos/TorJensen/tabmind/releases/latest";
+    static readonly Version AppVersion = typeof(TabMindTray).Assembly.GetName().Version;
 
     static readonly string AppDir = AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\');
     static readonly string DataDir = Environment.GetEnvironmentVariable("TABMIND_DATA") ??
@@ -33,11 +41,18 @@ static class TabMindTray
     static Process server;
     static bool quitting;
     static int restarts;
+    static Control ui;                       // marshals background work back to the UI thread
+    static ToolStripMenuItem updateItem;
+    static Release available;                // newer release found by the update check
+    static bool updating;
+    static bool autoInstall;                 // --update: install a newer version without asking
 
     [STAThread]
     static void Main(string[] args)
     {
         bool background = args.Contains("--background");
+        autoInstall = args.Contains("--update");
+        if (autoInstall) background = true;
         if (args.Contains("--setup-extension")) { SetupExtension(); return; }
 
         bool first;
@@ -50,7 +65,13 @@ static class TabMindTray
                 return;
             }
             Application.EnableVisualStyles();
+            ServicePointManager.SecurityProtocol |= (SecurityProtocolType)3072; // TLS 1.2 for GitHub
+            ui = new Control();
+            ui.CreateControl();
             BuildTray();
+            AnnounceIfUpdated();
+            StartUpdateChecks();
+            if (autoInstall) CheckForUpdate(false);
             if (!IsServerUp()) StartServer();
             if (!background)
             {
@@ -78,16 +99,23 @@ static class TabMindTray
         menu.Items.Add("Show library folder", null, delegate { Process.Start("explorer.exe", "\"" + DataDir + "\""); });
         menu.Items.Add("Restart TabMind", null, delegate { StopServer(); restarts = 0; StartServer(); });
         menu.Items.Add(new ToolStripSeparator());
+        updateItem = new ToolStripMenuItem("Check for updates...", null, delegate { OnUpdateClicked(); });
+        var autoUpdate = new ToolStripMenuItem("Check for updates automatically") { CheckOnClick = true, Checked = AutoCheckEnabled() };
+        autoUpdate.CheckedChanged += delegate { SetSetting("AutoUpdateCheck", autoUpdate.Checked ? 1 : 0); };
+        menu.Items.Add(updateItem);
+        menu.Items.Add(autoUpdate);
+        menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Quit TabMind", null, delegate { Quit(); });
 
         tray = new NotifyIcon
         {
             Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath),
-            Text = "TabMind - your saved tabs",
+            Text = "TabMind " + Short(AppVersion) + " - your saved tabs",
             ContextMenuStrip = menu,
             Visible = true,
         };
         tray.MouseClick += (s, e) => { if (e.Button == MouseButtons.Left) OpenLibrary(); };
+        tray.BalloonTipClicked += delegate { if (available != null && !updating) OnUpdateClicked(); };
     }
 
     static void Quit()
@@ -198,6 +226,141 @@ static class TabMindTray
             if (on) k.SetValue("TabMind", "\"" + Application.ExecutablePath + "\" --background");
             else k.DeleteValue("TabMind", false);
         }
+    }
+
+    // ---------------------------------------------------------------- updates
+    class Release { public Version Version; public string Tag, Notes, SetupUrl, SetupName, PageUrl; }
+
+    static string Short(Version v) { return v.Major + "." + v.Minor + "." + v.Build; }
+
+    static object GetSetting(string name)
+    {
+        using (var k = Registry.CurrentUser.OpenSubKey(SettingsKey)) return k == null ? null : k.GetValue(name);
+    }
+
+    static void SetSetting(string name, object value)
+    {
+        using (var k = Registry.CurrentUser.CreateSubKey(SettingsKey)) k.SetValue(name, value);
+    }
+
+    static bool AutoCheckEnabled() { var v = GetSetting("AutoUpdateCheck"); return v == null || (int)v != 0; }
+
+    // After an update, say so once.
+    static void AnnounceIfUpdated()
+    {
+        var last = GetSetting("LastRunVersion") as string;
+        SetSetting("LastRunVersion", Short(AppVersion));
+        if (last != null && last != Short(AppVersion))
+            tray.ShowBalloonTip(6000, "TabMind updated", "TabMind is now version " + Short(AppVersion) + ".", ToolTipIcon.Info);
+    }
+
+    static void StartUpdateChecks()
+    {
+        var timer = new System.Windows.Forms.Timer { Interval = 30 * 1000 };   // first check shortly after start
+        timer.Tick += delegate
+        {
+            timer.Interval = 12 * 60 * 60 * 1000;                              // then twice a day
+            if (AutoCheckEnabled() && available == null) CheckForUpdate(false);
+        };
+        timer.Start();
+    }
+
+    // Queries GitHub off the UI thread. interactive = the user asked, so also report "up to date" and errors.
+    static void CheckForUpdate(bool interactive)
+    {
+        ThreadPool.QueueUserWorkItem(delegate
+        {
+            Release r = null; string error = null;
+            try { r = FetchLatestRelease(); } catch (Exception e) { error = e.Message; }
+            ui.BeginInvoke((MethodInvoker)delegate
+            {
+                if (r != null && r.Version > AppVersion && r.SetupUrl != null)
+                {
+                    available = r;
+                    if (autoInstall) { DownloadAndInstall(r); return; }
+                    updateItem.Text = "Update to TabMind " + Short(r.Version) + "...";
+                    updateItem.Font = new Font(updateItem.Font, FontStyle.Bold);
+                    if (interactive) OfferUpdate(r);
+                    else tray.ShowBalloonTip(15000, "TabMind " + Short(r.Version) + " is available",
+                        "Click here to update. Your library is not affected.", ToolTipIcon.Info);
+                }
+                else if (interactive)
+                {
+                    if (error != null) MessageBox.Show("Could not check for updates:\n" + error, "TabMind", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    else MessageBox.Show("You have the latest version of TabMind (" + Short(AppVersion) + ").", "TabMind", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            });
+        });
+    }
+
+    static Release FetchLatestRelease()
+    {
+        using (var wc = new WebClient())
+        {
+            wc.Headers[HttpRequestHeader.UserAgent] = "TabMind/" + Short(AppVersion);
+            wc.Headers[HttpRequestHeader.Accept] = "application/vnd.github+json";
+            wc.Encoding = System.Text.Encoding.UTF8;
+            var json = (Dictionary<string, object>)new JavaScriptSerializer().DeserializeObject(wc.DownloadString(ReleasesApi));
+            var tag = (string)json["tag_name"];
+            Version v;
+            if (!Version.TryParse(tag.TrimStart('v', 'V'), out v)) return null;
+            var r = new Release { Version = new Version(v.Major, v.Minor, Math.Max(v.Build, 0), 0), Tag = tag,
+                                  Notes = json.ContainsKey("body") ? json["body"] as string : null,
+                                  PageUrl = json["html_url"] as string };
+            foreach (Dictionary<string, object> a in (IEnumerable)json["assets"])
+            {
+                var name = (string)a["name"];
+                if (name.StartsWith("TabMind-Setup", StringComparison.OrdinalIgnoreCase) && name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                { r.SetupUrl = (string)a["browser_download_url"]; r.SetupName = name; }
+            }
+            return r;
+        }
+    }
+
+    static void OnUpdateClicked()
+    {
+        if (updating) return;
+        if (available != null) OfferUpdate(available); else CheckForUpdate(true);
+    }
+
+    static void OfferUpdate(Release r)
+    {
+        string notes = string.IsNullOrWhiteSpace(r.Notes) ? "" : "\n\nWhat's new:\n" + (r.Notes.Length > 600 ? r.Notes.Substring(0, 600) + "..." : r.Notes);
+        var answer = MessageBox.Show("TabMind " + Short(r.Version) + " is available (you have " + Short(AppVersion) + ")." + notes +
+            "\n\nUpdate now? TabMind restarts briefly; your library is not affected.", "TabMind update",
+            MessageBoxButtons.YesNo, MessageBoxIcon.Information);
+        if (answer == DialogResult.Yes) DownloadAndInstall(r);
+    }
+
+    static void DownloadAndInstall(Release r)
+    {
+        updating = true;
+        updateItem.Text = "Downloading TabMind " + Short(r.Version) + "...";
+        updateItem.Enabled = false;
+        string dir = Path.Combine(Path.GetTempPath(), "TabMind-update");
+        Directory.CreateDirectory(dir);
+        string file = Path.Combine(dir, r.SetupName);
+        var wc = new WebClient();
+        wc.Headers[HttpRequestHeader.UserAgent] = "TabMind/" + Short(AppVersion);
+        wc.DownloadProgressChanged += (s, e) => { updateItem.Text = "Downloading TabMind " + Short(r.Version) + "... " + e.ProgressPercentage + "%"; };
+        wc.DownloadFileCompleted += (s, e) =>
+        {
+            wc.Dispose();
+            if (e.Error != null || e.Cancelled)
+            {
+                updating = false;
+                updateItem.Enabled = true;
+                updateItem.Text = "Update to TabMind " + Short(r.Version) + "...";
+                MessageBox.Show("The update could not be downloaded:\n" + (e.Error != null ? e.Error.Message : "cancelled"), "TabMind",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            // The installer replaces this program, so start it and step out of the way.
+            // /SILENT shows only a progress window and keeps the options chosen at first install.
+            Process.Start(new ProcessStartInfo(file, "/SILENT /SUPPRESSMSGBOXES /NORESTART") { UseShellExecute = true });
+            Quit();
+        };
+        wc.DownloadFileAsync(new Uri(r.SetupUrl), file);
     }
 
     // ---------------------------------------------------------------- browser extension

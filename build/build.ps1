@@ -63,7 +63,7 @@ Run npx.cmd @('postject', $serverExe, 'NODE_SEA_BLOB', "$Out\sea-prep.blob",
 Step 'Compiling the tray app TabMind.exe'
 $csc = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 Run $csc @('-nologo', '-target:winexe', '-optimize', "-out:$Out\TabMind.exe", "-win32icon:$Root\assets\tabmind.ico",
-  '-r:System.Windows.Forms.dll', '-r:System.Drawing.dll', '-r:System.Core.dll', "$Root\desktop\TabMindTray.cs")
+  '-r:System.Windows.Forms.dll', '-r:System.Drawing.dll', '-r:System.Core.dll', '-r:System.Web.Extensions.dll', "$Root\desktop\TabMindTray.cs")
 
 # ------------------------------------------------------------------ smoke test
 Step 'Smoke-testing tabmind-server.exe'

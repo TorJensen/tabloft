@@ -66,8 +66,8 @@ procedure StopTabMind();
 var
   Code: Integer;
 begin
-  // Tray app and packaged server
-  Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /T /IM TabMind.exe', '', SW_HIDE, ewWaitUntilTerminated, Code);
+  // Tray app and packaged server (no /T: an in-app update runs this installer as the tray's child)
+  Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM TabMind.exe', '', SW_HIDE, ewWaitUntilTerminated, Code);
   Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM tabmind-server.exe', '', SW_HIDE, ewWaitUntilTerminated, Code);
   // A server started by the older script-based install runs as node.exe: stop it only if it answers as TabMind
   Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
