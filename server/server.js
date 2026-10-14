@@ -3,10 +3,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
+import * as sea from 'node:sea';
 import { openDb, ftsQuery } from './db.js';
 import { loadMhtml, renderPart } from './mhtml.js';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+// Packaged as a single executable (tabmind-server.exe) the UI is embedded as SEA
+// assets and the app folder is wherever the .exe lives.
+const IS_SEA = sea.isSea();
+const ROOT = IS_SEA ? path.dirname(process.execPath) : path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = Number(process.env.TABMIND_PORT || 7878);
 // Library data lives outside the app folder so updates/reinstalls never touch it.
 // (A data/ folder next to the app is still honoured for early installs.)
@@ -23,7 +27,7 @@ const UI = path.join(ROOT, 'ui');
 for (const d of [DATA, SNAPS, SCREENS]) fs.mkdirSync(d, { recursive: true });
 
 const db = openDb(DATA);
-const VERSION = '0.1.0';
+const VERSION = '0.2.0';
 
 // ---------- helpers ----------
 const MIME = {
@@ -341,6 +345,14 @@ function serveFile(res, file, root, extra = {}) {
   fs.createReadStream(full).pipe(res);
 }
 
+function serveUi(res, file) {
+  if (!IS_SEA) return serveFile(res, file, UI);
+  let buf;
+  try { buf = Buffer.from(sea.getAsset('ui/' + file.replace(/\\/g, '/'))); } catch { return send(res, 404, 'Not found'); }
+  res.writeHead(200, { 'Content-Type': MIME[path.extname(file).toLowerCase()] || 'application/octet-stream' });
+  res.end(buf);
+}
+
 // ---------- server ----------
 const ALLOWED_HOSTS = new Set([`127.0.0.1:${PORT}`, `localhost:${PORT}`]);
 
@@ -363,13 +375,20 @@ const server = http.createServer(async (req, res) => {
     if (p.startsWith('/files/snapshots/')) {
       return serveFile(res, decodeURIComponent(p.slice(17)), SNAPS, { 'Content-Disposition': 'attachment' });
     }
-    if (p === '/' || p === '/index.html') return serveFile(res, 'index.html', UI);
-    return serveFile(res, decodeURIComponent(p.slice(1)), UI);
+    return serveUi(res, p === '/' ? 'index.html' : decodeURIComponent(p.slice(1)));
   } catch (e) {
     console.error(e);
     if (!res.headersSent) send(res, e.status || 500, { error: e.message });
     else res.end();
   }
+});
+
+server.on('error', e => {
+  if (e.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use - is TabMind already running?`);
+    process.exit(2);
+  }
+  throw e;
 });
 
 server.listen(PORT, '127.0.0.1', () => {

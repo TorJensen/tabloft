@@ -15,6 +15,24 @@ Everything lives on your own computer. There is no cloud and no account.
 
 ## Install
 
+### Desktop installer (recommended)
+
+1. Run **`TabMind-Setup-<version>.exe`**. You don't need admin rights or Node.js. It installs to `%LOCALAPPDATA%\Programs\TabMind`.
+2. On the last page, leave **"Add the TabMind button to my browsers"** ticked. TabMind finds Chrome, Brave and Edge and opens each one's Extensions page. Turn on **Developer mode**, click **Load unpacked**, press Ctrl+V (the folder path is already copied) and click **Select Folder**. Then pin TabMind to the toolbar.
+3. TabMind lives in the **system tray** (by the clock). Left-click the icon to open your library. Right-click it for: add to browsers, start at login, show library folder, restart, and quit.
+
+To update, run a newer Setup over the existing install; your library is never touched. To uninstall, go to **Settings > Apps > TabMind > Uninstall**. The uninstaller asks before deleting your library and keeps it by default.
+
+> Windows SmartScreen may warn that the installer is from an unknown publisher, because it isn't code-signed yet. Click **More info > Run anyway**.
+
+**Building the installer** (developers): install Node.js 24+, run `npm install`, then
+`powershell -ExecutionPolicy Bypass -File build\build.ps1`. This produces `dist\TabMind-Setup-<version>.exe`, and installs Inno Setup with winget the first time. It works like this:
+- `server/` and `ui/` are packed into `tabmind-server.exe`, a single executable with Node built in;
+- the tray app `desktop/TabMindTray.cs` is compiled with the C# compiler that ships with Windows;
+- `build/installer.iss` (Inno Setup) wraps both into the installer.
+
+### From source, with scripts (needs Node.js)
+
 1. **Get TabMind.** Run `git clone https://github.com/TorJensen/tabmind.git` in the folder where you want it, or download the ZIP from GitHub and unzip it. Any folder works, for example `C:\TabMind`.
 2. **Double-click `install.cmd`.** The installer:
    - checks for [Node.js](https://nodejs.org) 22.13+ and offers to install it with winget if it's missing;

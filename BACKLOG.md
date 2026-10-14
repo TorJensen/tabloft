@@ -1,12 +1,14 @@
 # TabMind backlog
 
+## Done
+
+- **Desktop installer (v0.2).** `TabMind-Setup.exe` (about 23 MB) needs no Node.js and no admin rights. It adds a tray app, a Start Menu entry, optional autostart, an Add/Remove Programs entry, and an uninstaller that keeps the library. It also walks you through adding the extension to each browser. Built by `build/build.ps1`.
+
 ## Next
 
-- **Desktop installer.** The goal is one `TabMind-Setup.exe` with no Node.js prerequisite and no scripts to run.
-  - Bundle the server, with its own Node runtime and the `ui/` files, into a single `tabmind.exe` (Node single-executable application).
-  - Add a tray icon: open library, pause, quit.
-  - Build a per-user installer that needs no admin rights (Inno Setup): Start Menu entry, autostart, Add/Remove Programs entry, and an uninstaller that keeps the library by default.
-  - Keep the extension "load unpacked" step until it's published to the Chrome Web Store and Edge Add-ons; that also removes the developer-mode warning.
+- **Code-sign the installer and exes** so SmartScreen stops warning about an unknown publisher. This needs a code-signing certificate, or Azure Trusted Signing (about $10/month).
+- **Publish the extension** to the Chrome Web Store ($5 one-time fee; Brave uses the Chrome store too) and to Edge Add-ons (free). This removes the "Load unpacked" and developer-mode steps and the startup warning, and gives automatic extension updates.
+- **Update check.** The tray app checks GitHub Releases and offers the new Setup.
 
 ## Later
 
@@ -16,3 +18,4 @@
 - **Resurface.** A weekly "you saved these and never looked" view of the Inbox.
 - **Firefox support.** Firefox has no `pageCapture`, so it would need another way to make snapshots, such as a SingleFile-style capture.
 - **Screenshots of background tabs.** Today only the visible tab gets one; this would need briefly activating each tab, as an option.
+- **Smaller installer.** Most of the size is the bundled Node runtime.
