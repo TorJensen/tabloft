@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import * as sea from 'node:sea';
 import { openDb, ftsQuery } from './db.js';
 import { loadMhtml, renderPart } from './mhtml.js';
+import { CONSENT_CSS } from './consent.js';
 
 // Packaged as a single executable (tabmind-server.exe) the UI is embedded as SEA
 // assets and the app folder is wherever the .exe lives.
@@ -27,7 +28,7 @@ const UI = path.join(ROOT, 'ui');
 for (const d of [DATA, SNAPS, SCREENS]) fs.mkdirSync(d, { recursive: true });
 
 const db = openDb(DATA);
-const VERSION = '0.2.0';
+const VERSION = '0.2.1';
 
 // ---------- helpers ----------
 const MIME = {
@@ -332,9 +333,13 @@ function snapshot(res, url) {
   if (!item?.snapshot) return send(res, 404, 'No snapshot for this item');
   let doc;
   try { doc = loadMhtml(path.join(SNAPS, item.snapshot)); } catch (e) { return send(res, 500, 'Could not read snapshot: ' + e.message); }
-  const out = renderPart(doc, m[2] === undefined ? undefined : Number(m[2]), `/snap/${m[1]}/p/`);
+  // Cookie banners are hidden when viewing; ?raw=1 shows the page exactly as captured.
+  const extraCss = url.searchParams.get('raw') === '1' ? '' : CONSENT_CSS;
+  const out = renderPart(doc, m[2] === undefined ? undefined : Number(m[2]), `/snap/${m[1]}/p/`, { extraCss });
   if (!out) return send(res, 404, 'Part not found');
-  res.writeHead(200, { 'Content-Type': out.type, 'Content-Security-Policy': SNAP_CSP, 'Cache-Control': 'private, max-age=3600' });
+  // The document is re-rendered each time (viewing rules can change); its parts never change.
+  const cache = m[2] === undefined ? 'no-cache' : 'private, max-age=3600';
+  res.writeHead(200, { 'Content-Type': out.type, 'Content-Security-Policy': SNAP_CSP, 'Cache-Control': cache });
   res.end(out.body);
 }
 

@@ -234,8 +234,12 @@ function showTab(tab) {
   const body = $('#d-body');
   if (tab === 'snapshot') {
     body.innerHTML = it.snapshot
-      ? `<div class="snap-bar">Offline snapshot · <a href="/files/snapshots/${esc(it.snapshot)}" download>Download .mhtml</a></div>
-         <iframe src="/snap/${it.id}/" sandbox="allow-popups allow-popups-to-escape-sandbox" title="Snapshot"></iframe>`
+      ? `<div class="snap-bar">Offline snapshot ·
+           ${state.rawSnapshot
+             ? `Showing it exactly as saved · <a href="#" data-raw="0">Hide cookie banners</a>`
+             : `Cookie banners hidden · <a href="#" data-raw="1">Show original</a>`}
+           · <a href="/files/snapshots/${esc(it.snapshot)}" download>Download .mhtml</a></div>
+         <iframe src="/snap/${it.id}/${state.rawSnapshot ? '?raw=1' : ''}" sandbox="allow-popups allow-popups-to-escape-sandbox" title="Snapshot"></iframe>`
       : `<div class="no-snap"><p>No snapshot for this page — it was saved as a link only (the tab was asleep or not a regular web page).</p>
          <p>Open it live and save it again to capture a snapshot.</p>${it.screenshot ? `<img src="/files/screens/${esc(it.screenshot)}" alt="">` : ''}</div>`;
   } else if (tab === 'screenshot') {
@@ -437,6 +441,13 @@ $('#d-tags').addEventListener('keydown', async e => {
   $('#d-tag-input').focus();
 });
 $$('#d-tabs button').forEach(b => (b.onclick = () => showTab(b.dataset.tab)));
+$('#d-body').addEventListener('click', e => {
+  const raw = e.target.dataset?.raw;
+  if (raw === undefined) return;
+  e.preventDefault();
+  state.rawSnapshot = raw === '1';
+  showTab('snapshot');
+});
 
 document.addEventListener('keydown', e => {
   const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName);

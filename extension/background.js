@@ -1,5 +1,6 @@
 // TabMind background worker: captures tabs (link + text + MHTML snapshot + screenshot)
 // and ships them to the local TabMind server.
+import { CONSENT_SELECTORS, hideConsentInPage, restoreConsentInPage } from './consent.js';
 
 const DEFAULTS = {
   server: 'http://127.0.0.1:7878',
@@ -7,6 +8,7 @@ const DEFAULTS = {
   loadUnloaded: true,     // reload sleeping/discarded tabs so they can be snapshotted
   screenshots: true,      // screenshot tabs that are currently visible
   skipPinned: true,       // bulk saves never close pinned tabs
+  hideConsent: true,      // hide cookie banners while capturing (restored right after)
 };
 
 export async function getSettings() {
@@ -93,6 +95,21 @@ async function captureTab(tab, opts, settings) {
     t = (await waitForLoad(t.id, 10000)) || t;
   }
   const live = !t.discarded && t.status !== 'unloaded';
+  let hid = 0;
+  if (live && settings.hideConsent) {
+    try {
+      [{ result: hid }] = await chrome.scripting.executeScript({ target: { tabId: t.id }, func: hideConsentInPage, args: [CONSENT_SELECTORS] });
+      if (hid) await sleep(150); // let the page repaint before the screenshot
+    } catch {}
+  }
+  try {
+    return await capturePage(t, live, opts, settings);
+  } finally {
+    if (hid) chrome.scripting.executeScript({ target: { tabId: t.id }, func: restoreConsentInPage }).catch(() => {});
+  }
+}
+
+async function capturePage(t, live, opts, settings) {
   const info = live ? await pageInfo(t.id) : {};
   const shot = live && t.active && settings.screenshots ? await screenshot(t) : null;
 

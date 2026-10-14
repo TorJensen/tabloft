@@ -105,7 +105,7 @@ function rewriteCss(css, resolve, doc) {
   });
 }
 
-function rewriteHtml(html, resolve, doc) {
+function rewriteHtml(html, resolve, doc, extraCss) {
   html = html.replace(/(\s(?:src|href|poster|background|data-src)\s*=\s*)(["'])(.*?)\2/gis, (all, pre, q, val) => {
     const r = resolve(val);
     if (typeof r === 'string') return `${pre}${q}${r}${q}`;
@@ -124,16 +124,23 @@ function rewriteHtml(html, resolve, doc) {
   html = html.replace(/(\sstyle\s*=\s*)(["'])(.*?)\2/gis, (all, pre, q, css) => pre + q + rewriteCss(css, resolve, doc) + q);
   // Snapshot parts are same-server but the sandboxed frame has an opaque origin, so CORS-mode loads would fail.
   html = html.replace(/\scrossorigin(?:\s*=\s*(["'])[^"']*\1)?/gi, '');
-  // Links in the snapshot open the live page in a new tab.
+  // Links in the snapshot open the live page in a new tab - never inside the snapshot frame.
+  html = html.replace(/(<a\b[^>]*?\s)target\s*=\s*(["']?)_(?:self|top|parent)\2/gi, '$1target="_blank"');
   const baseTag = '<base target="_blank">';
   if (/<head[^>]*>/i.test(html)) html = html.replace(/<head[^>]*>/i, m => m + baseTag);
   else html = baseTag + html;
+  // Extra CSS (e.g. hiding cookie banners) goes last so it wins over the page's own styles.
+  if (extraCss) {
+    const tag = '<style id="tabmind-view">' + extraCss + '</style>';
+    const end = html.search(/<\/body>(?![\s\S]*<\/body>)/i);
+    html = end >= 0 ? html.slice(0, end) + tag + html.slice(end) : html + tag;
+  }
   return html;
 }
 
 // Returns { type, body } for part `n` (or the main document) with references
-// rewritten to point at `${prefix}<partIndex>`.
-export function renderPart(doc, n, prefix) {
+// rewritten to point at `${prefix}<partIndex>`; `extraCss` is appended to HTML documents.
+export function renderPart(doc, n, prefix, { extraCss } = {}) {
   const idx = n === undefined ? doc.main : n;
   const p = doc.parts[idx];
   if (!p) return null;
@@ -142,7 +149,7 @@ export function renderPart(doc, n, prefix) {
     try { text = new TextDecoder(p.charset).decode(p.data); } catch { text = p.data.toString('utf8'); }
     const base = p.location && !p.location.startsWith('cid:') ? p.location : (doc.parts[doc.main].location || 'about:blank');
     const resolve = makeResolver(doc, base, prefix);
-    const body = p.type === 'text/html' ? rewriteHtml(text, resolve, doc) : rewriteCss(text, resolve, doc);
+    const body = p.type === 'text/html' ? rewriteHtml(text, resolve, doc, extraCss) : rewriteCss(text, resolve, doc);
     return { type: `${p.type}; charset=utf-8`, body: Buffer.from(body, 'utf8') };
   }
   return { type: p.type, body: p.data };

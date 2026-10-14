@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TabMind",
-  "version": "0.1.0",
+  "version": "0.2.1",
   "description": "Send tabs to your TabMind library — link + full snapshot — then close them without fear.",
   "permissions": ["tabs", "pageCapture", "scripting", "contextMenus", "storage"],
   "host_permissions": ["<all_urls>"],

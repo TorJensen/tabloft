@@ -18,7 +18,7 @@ using Microsoft.Win32;
 
 [assembly: System.Reflection.AssemblyTitle("TabMind")]
 [assembly: System.Reflection.AssemblyProduct("TabMind")]
-[assembly: System.Reflection.AssemblyVersion("0.2.0.0")]
+[assembly: System.Reflection.AssemblyVersion("0.2.1.0")]
 
 static class TabMindTray
 {
