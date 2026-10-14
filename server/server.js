@@ -28,7 +28,7 @@ const UI = path.join(ROOT, 'ui');
 for (const d of [DATA, SNAPS, SCREENS]) fs.mkdirSync(d, { recursive: true });
 
 const db = openDb(DATA);
-const VERSION = '0.3.0';
+const VERSION = '0.3.1';
 
 // ---------- helpers ----------
 const MIME = {

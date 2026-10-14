@@ -23,7 +23,7 @@ using Microsoft.Win32;
 
 [assembly: System.Reflection.AssemblyTitle("TabMind")]
 [assembly: System.Reflection.AssemblyProduct("TabMind")]
-[assembly: System.Reflection.AssemblyVersion("0.3.0.0")]
+[assembly: System.Reflection.AssemblyVersion("0.3.1.0")]
 
 static class TabMindTray
 {
@@ -310,11 +310,22 @@ static class TabMindTray
             foreach (Dictionary<string, object> a in (IEnumerable)json["assets"])
             {
                 var name = (string)a["name"];
-                if (name.StartsWith("TabMind-Setup", StringComparison.OrdinalIgnoreCase) && name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
-                { r.SetupUrl = (string)a["browser_download_url"]; r.SetupName = name; }
+                var url = a["browser_download_url"] as string;
+                if (name.StartsWith("TabMind-Setup", StringComparison.OrdinalIgnoreCase) && name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
+                    && IsTrustedDownload(url))
+                { r.SetupUrl = url; r.SetupName = name; }
             }
             return r;
         }
+    }
+
+    // Updates are only ever downloaded over HTTPS from this repo's GitHub release assets.
+    static bool IsTrustedDownload(string url)
+    {
+        Uri u;
+        if (url == null || !Uri.TryCreate(url, UriKind.Absolute, out u)) return false;
+        return u.Scheme == Uri.UriSchemeHttps && u.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase)
+            && u.AbsolutePath.StartsWith("/TorJensen/tabmind/releases/download/", StringComparison.OrdinalIgnoreCase);
     }
 
     static void OnUpdateClicked()
@@ -339,7 +350,7 @@ static class TabMindTray
         updateItem.Enabled = false;
         string dir = Path.Combine(Path.GetTempPath(), "TabMind-update");
         Directory.CreateDirectory(dir);
-        string file = Path.Combine(dir, r.SetupName);
+        string file = Path.Combine(dir, "TabMind-Setup-update.exe");
         var wc = new WebClient();
         wc.Headers[HttpRequestHeader.UserAgent] = "TabMind/" + Short(AppVersion);
         wc.DownloadProgressChanged += (s, e) => { updateItem.Text = "Downloading TabMind " + Short(r.Version) + "... " + e.ProgressPercentage + "%"; };
@@ -360,6 +371,7 @@ static class TabMindTray
             Process.Start(new ProcessStartInfo(file, "/SILENT /SUPPRESSMSGBOXES /NORESTART") { UseShellExecute = true });
             Quit();
         };
+        if (!IsTrustedDownload(r.SetupUrl)) { updating = false; updateItem.Enabled = true; return; }
         wc.DownloadFileAsync(new Uri(r.SetupUrl), file);
     }
 

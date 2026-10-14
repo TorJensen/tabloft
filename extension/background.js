@@ -285,9 +285,12 @@ const newer = (a, b) => {
 async function checkExtensionUpdate() {
   if (running) return;
   try {
+    // Only the local TabMind server may trigger this, and only with a plain version number.
+    const { server } = await getSettings();
+    if (!/^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/?$/.test(server)) return;
     const h = await api('/api/health');
     const mine = chrome.runtime.getManifest().version;
-    if (!h.extVersion || !newer(h.extVersion, mine)) return;
+    if (typeof h.extVersion !== 'string' || !/^\d{1,4}\.\d{1,4}\.\d{1,4}$/.test(h.extVersion) || !newer(h.extVersion, mine)) return;
     // Guard against a reload loop if this copy was loaded from a different folder than the installed one.
     const { reloadedFor } = await chrome.storage.local.get('reloadedFor');
     if (reloadedFor === h.extVersion) return;
