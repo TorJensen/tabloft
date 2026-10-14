@@ -1,4 +1,4 @@
-' Starts the TabMind server with no console window (used for auto-start at login).
+' Starts the TabLoft server with no console window (used for auto-start at login).
 Set fso = CreateObject("Scripting.FileSystemObject")
 dir = fso.GetParentFolderName(WScript.ScriptFullName)
 Set sh = CreateObject("WScript.Shell")

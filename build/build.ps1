@@ -1,8 +1,8 @@
-# Builds the TabMind desktop installer:  dist\TabMind-Setup-<version>.exe
+# Builds the TabLoft desktop installer:  dist\TabLoft-Setup-<version>.exe
 #
 #   1. bundles server/ into one script (esbuild)
-#   2. packs it plus ui/ into tabmind-server.exe, with Node built in (Node "single executable application")
-#   3. compiles the tray app TabMind.exe (C# compiler that ships with Windows)
+#   2. packs it plus ui/ into tabloft-server.exe, with Node built in (Node "single executable application")
+#   3. compiles the tray app TabLoft.exe (C# compiler that ships with Windows)
 #   4. compiles the installer with Inno Setup (installed with winget if missing)
 #
 # Usage (from the repo root):  powershell -ExecutionPolicy Bypass -File build\build.ps1
@@ -28,7 +28,7 @@ function Run($exe, [string[]]$a) {
   if ($code -ne 0) { throw "$exe failed with exit code $code" }
 }
 
-Write-Host "Building TabMind $Version" -ForegroundColor White
+Write-Host "Building TabLoft $Version" -ForegroundColor White
 New-Item -ItemType Directory -Force -Path $Out, $Dist | Out-Null
 Get-ChildItem $Out | Remove-Item -Recurse -Force
 if (-not (Test-Path (Join-Path $Root 'node_modules\esbuild'))) { Step 'Installing build tools (npm install)'; Run npm.cmd @('install', '--no-fund', '--no-audit') }
@@ -39,7 +39,7 @@ Run npx.cmd @('esbuild', 'server/server.js', '--bundle', '--platform=node', '--f
   "--outfile=$Out\server.cjs", '--log-level=warning', '--log-override:empty-import-meta=silent')
 
 # ------------------------------------------------------------------ 2. single executable
-Step 'Packing tabmind-server.exe (Node runtime + server + library UI)'
+Step 'Packing tabloft-server.exe (Node runtime + server + library UI)'
 $assets = [ordered]@{}
 Get-ChildItem ui -File -Recurse | ForEach-Object {
   $rel = $_.FullName.Substring($Root.Length + 1).Replace('\', '/')
@@ -54,33 +54,33 @@ $seaConfig = [ordered]@{
 }
 $seaConfig | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 "$Out\sea-config.json"
 Run node @('--experimental-sea-config', "$Out\sea-config.json")
-$serverExe = Join-Path $Out 'tabmind-server.exe'
+$serverExe = Join-Path $Out 'tabloft-server.exe'
 Copy-Item (Get-Command node).Source $serverExe
 Run npx.cmd @('postject', $serverExe, 'NODE_SEA_BLOB', "$Out\sea-prep.blob",
   '--sentinel-fuse', 'NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2', '--overwrite')
 
 # ------------------------------------------------------------------ 3. tray app
-Step 'Compiling the tray app TabMind.exe'
+Step 'Compiling the tray app TabLoft.exe'
 $csc = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
-Run $csc @('-nologo', '-target:winexe', '-optimize', "-out:$Out\TabMind.exe", "-win32icon:$Root\assets\tabmind.ico",
-  '-r:System.Windows.Forms.dll', '-r:System.Drawing.dll', '-r:System.Core.dll', '-r:System.Web.Extensions.dll', "$Root\desktop\TabMindTray.cs")
+Run $csc @('-nologo', '-target:winexe', '-optimize', "-out:$Out\TabLoft.exe", "-win32icon:$Root\assets\tabloft.ico",
+  '-r:System.Windows.Forms.dll', '-r:System.Drawing.dll', '-r:System.Core.dll', '-r:System.Web.Extensions.dll', "$Root\desktop\TabLoftTray.cs")
 
 # ------------------------------------------------------------------ smoke test
-Step 'Smoke-testing tabmind-server.exe'
-$env:TABMIND_PORT = '7891'
-$env:TABMIND_DATA = Join-Path $Out 'smoke-data'
+Step 'Smoke-testing tabloft-server.exe'
+$env:TABLOFT_PORT = '7891'
+$env:TABLOFT_DATA = Join-Path $Out 'smoke-data'
 $p = Start-Process $serverExe -PassThru -WindowStyle Hidden
 try {
   $ok = $false
   for ($i = 0; $i -lt 40 -and -not $ok; $i++) {
     Start-Sleep -Milliseconds 250
-    try { $ok = (Invoke-WebRequest "http://127.0.0.1:7891/" -UseBasicParsing -TimeoutSec 2).Content -match '<title>TabMind' } catch {}
+    try { $ok = (Invoke-WebRequest "http://127.0.0.1:7891/" -UseBasicParsing -TimeoutSec 2).Content -match '<title>TabLoft' } catch {}
   }
-  if (-not $ok) { throw 'tabmind-server.exe did not serve the library page' }
+  if (-not $ok) { throw 'tabloft-server.exe did not serve the library page' }
   Write-Host '  [ok] server starts and serves the embedded library UI' -ForegroundColor Green
 } finally {
   Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
-  Remove-Item Env:TABMIND_PORT, Env:TABMIND_DATA
+  Remove-Item Env:TABLOFT_PORT, Env:TABLOFT_DATA
   Start-Sleep -Milliseconds 300
   Remove-Item (Join-Path $Out 'smoke-data') -Recurse -Force -ErrorAction SilentlyContinue
 }
@@ -101,6 +101,6 @@ if (-not $iscc) {
 }
 Run $iscc @('/Q', "/DAppVersion=$Version", "/DRoot=$Root", "/DOut=$Out", "/O$Dist", "$PSScriptRoot\installer.iss")
 
-$setup = Get-Item (Join-Path $Dist "TabMind-Setup-$Version.exe")
+$setup = Get-Item (Join-Path $Dist "TabLoft-Setup-$Version.exe")
 Write-Host ""
 Write-Host ("Built {0}  ({1:N1} MB)" -f $setup.FullName, ($setup.Length / 1MB)) -ForegroundColor Green

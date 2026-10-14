@@ -1,5 +1,5 @@
-' Opens the TabMind library, starting the server first if it isn't running.
-' Used by the "TabMind Library" Start Menu shortcut.
+' Opens the TabLoft library, starting the server first if it isn't running.
+' Used by the "TabLoft Library" Start Menu shortcut.
 Set fso = CreateObject("Scripting.FileSystemObject")
 Set sh = CreateObject("WScript.Shell")
 dir = fso.GetParentFolderName(WScript.ScriptFullName)

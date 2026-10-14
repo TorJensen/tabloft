@@ -8,27 +8,34 @@ import { openDb, ftsQuery } from './db.js';
 import { loadMhtml, renderPart } from './mhtml.js';
 import { CONSENT_CSS } from './consent.js';
 
-// Packaged as a single executable (tabmind-server.exe) the UI is embedded as SEA
+// Packaged as a single executable (tabloft-server.exe) the UI is embedded as SEA
 // assets and the app folder is wherever the .exe lives.
 const IS_SEA = sea.isSea();
 const ROOT = IS_SEA ? path.dirname(process.execPath) : path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const PORT = Number(process.env.TABMIND_PORT || 7878);
+// TABMIND_* are the names from before the rename to TabLoft.
+const PORT = Number(process.env.TABLOFT_PORT || process.env.TABMIND_PORT || 7878);
 // Library data lives outside the app folder so updates/reinstalls never touch it.
 // (A data/ folder next to the app is still honoured for early installs.)
 function defaultDataDir() {
   const legacy = path.join(ROOT, 'data');
-  if (fs.existsSync(path.join(legacy, 'tabmind.db'))) return legacy;
-  if (process.platform === 'win32' && process.env.LOCALAPPDATA) return path.join(process.env.LOCALAPPDATA, 'TabMind');
-  return path.join(os.homedir(), '.tabmind');
+  if (['tabloft.db', 'tabmind.db'].some(f => fs.existsSync(path.join(legacy, f)))) return legacy;
+  const win = process.platform === 'win32' && process.env.LOCALAPPDATA;
+  const dir = win ? path.join(process.env.LOCALAPPDATA, 'TabLoft') : path.join(os.homedir(), '.tabloft');
+  const old = win ? path.join(process.env.LOCALAPPDATA, 'TabMind') : path.join(os.homedir(), '.tabmind');
+  // Move a library from before the rename. If that fails (e.g. a file is in use), keep using it where it is.
+  if (!fs.existsSync(dir) && fs.existsSync(old)) {
+    try { fs.renameSync(old, dir); } catch (e) { console.error(`Could not move ${old} to ${dir}: ${e.message}`); return old; }
+  }
+  return dir;
 }
-const DATA = path.resolve(process.env.TABMIND_DATA || defaultDataDir());
+const DATA = path.resolve(process.env.TABLOFT_DATA || process.env.TABMIND_DATA || defaultDataDir());
 const SNAPS = path.join(DATA, 'snapshots');
 const SCREENS = path.join(DATA, 'screens');
 const UI = path.join(ROOT, 'ui');
 for (const d of [DATA, SNAPS, SCREENS]) fs.mkdirSync(d, { recursive: true });
 
 const db = openDb(DATA);
-const VERSION = '0.3.1';
+const VERSION = '0.4.0';
 
 // ---------- helpers ----------
 const MIME = {
@@ -260,7 +267,7 @@ async function api(req, res, url) {
   const id = m ? Number(m[1]) : null;
   const sub = m?.[2];
 
-  if (p === '/api/health') return send(res, 200, { ok: true, app: 'TabMind', version: VERSION, data: DATA, extVersion: installedExtensionVersion() });
+  if (p === '/api/health') return send(res, 200, { ok: true, app: 'TabLoft', version: VERSION, data: DATA, extVersion: installedExtensionVersion() });
   if (p === '/api/facets' && req.method === 'GET') return facets(res);
   if (p === '/api/items' && req.method === 'GET') return listItems(res, url.searchParams);
   if (p === '/api/items' && req.method === 'POST') return saveItem(req, res);
@@ -396,13 +403,13 @@ const server = http.createServer(async (req, res) => {
 
 server.on('error', e => {
   if (e.code === 'EADDRINUSE') {
-    console.error(`Port ${PORT} is already in use - is TabMind already running?`);
+    console.error(`Port ${PORT} is already in use - is TabLoft already running?`);
     process.exit(2);
   }
   throw e;
 });
 
 server.listen(PORT, '127.0.0.1', () => {
-  console.log(`TabMind ${VERSION} running at http://127.0.0.1:${PORT}`);
+  console.log(`TabLoft ${VERSION} running at http://127.0.0.1:${PORT}`);
   console.log(`Library data: ${DATA}`);
 });

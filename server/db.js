@@ -1,8 +1,18 @@
 import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
+import fs from 'node:fs';
 
 export function openDb(dataDir) {
-  const db = new DatabaseSync(path.join(dataDir, 'tabmind.db'));
+  const file = path.join(dataDir, 'tabloft.db');
+  // Libraries from before the rename (TabMind) used tabmind.db. The -wal/-shm files belong
+  // with it and must move together, while nothing has the database open.
+  const legacy = path.join(dataDir, 'tabmind.db');
+  if (!fs.existsSync(file) && fs.existsSync(legacy)) {
+    for (const ext of ['', '-wal', '-shm']) {
+      if (fs.existsSync(legacy + ext)) fs.renameSync(legacy + ext, file + ext);
+    }
+  }
+  const db = new DatabaseSync(file);
   db.exec(`
     PRAGMA journal_mode = WAL;
     PRAGMA foreign_keys = ON;

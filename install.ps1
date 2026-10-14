@@ -1,11 +1,11 @@
-# TabMind installer for Windows.
-# Installs/updates TabMind from this folder: checks Node.js, sets up shortcuts and
+# TabLoft installer for Windows.
+# Installs/updates TabLoft from this folder: checks Node.js, sets up shortcuts and
 # auto-start, starts the server and walks you through adding the browser extension.
 # Safe to run again at any time (that is also how updates are applied).
 #
 #   install.cmd                      normal interactive install
 #   install.cmd -Yes                 don't ask questions (accept defaults)
-#   install.cmd -NoAutostart         don't start TabMind at login
+#   install.cmd -NoAutostart         don't start TabLoft at login
 #   install.cmd -NoBrowserSetup      skip the extension walkthrough (used by update.cmd)
 
 param([switch]$Yes, [switch]$NoAutostart, [switch]$NoBrowserSetup)
@@ -16,8 +16,8 @@ $Port = 7878
 $Url = "http://127.0.0.1:$Port"
 $MinNode = [version]'22.13'
 $StartMenu = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs'
-$StartupLnk = Join-Path $StartMenu 'Startup\TabMind.lnk'
-$MenuDir = Join-Path $StartMenu 'TabMind'
+$StartupLnk = Join-Path $StartMenu 'Startup\TabLoft.lnk'
+$MenuDir = Join-Path $StartMenu 'TabLoft'
 
 function Step($m) { Write-Host ""; Write-Host "> $m" -ForegroundColor Cyan }
 function Ok($m) { Write-Host "  [ok] $m" -ForegroundColor Green }
@@ -39,10 +39,10 @@ function Get-NodeVersion {
   return $null
 }
 
-function Test-TabMind {
+function Test-TabLoft {
   try {
     $r = Invoke-RestMethod -Uri "$Url/api/health" -TimeoutSec 2
-    return $r.app -eq 'TabMind'
+    return $r.app -eq 'TabLoft'
   } catch { return $false }
 }
 
@@ -51,19 +51,19 @@ function New-Shortcut($path, $target, $arguments, $description) {
   $s.TargetPath = $target
   $s.Arguments = $arguments
   $s.WorkingDirectory = $App
-  $s.IconLocation = (Join-Path $App 'assets\tabmind.ico')
+  $s.IconLocation = (Join-Path $App 'assets\tabloft.ico')
   $s.Description = $description
   $s.Save()
 }
 
-Write-Host "TabMind installer" -ForegroundColor White
+Write-Host "TabLoft installer" -ForegroundColor White
 Note "Program folder: $App"
 
 # ---------------------------------------------------------------- 1. Node.js
 Step 'Checking Node.js'
 $v = Get-NodeVersion
 if (-not $v -or $v -lt $MinNode) {
-  if ($v) { Warn "Node.js $v is too old (TabMind needs $MinNode or newer)." } else { Warn 'Node.js is not installed.' }
+  if ($v) { Warn "Node.js $v is too old (TabLoft needs $MinNode or newer)." } else { Warn 'Node.js is not installed.' }
   $winget = Get-Command winget -ErrorAction SilentlyContinue
   if ($winget -and (Ask 'Install the current Node.js LTS now using winget?')) {
     & winget install --id OpenJS.NodeJS.LTS --exact --silent --accept-source-agreements --accept-package-agreements
@@ -79,11 +79,11 @@ Ok "Node.js $v"
 
 # ---------------------------------------------------------------- 2. Stop a running copy
 Step 'Preparing'
-if (Test-TabMind) {
+if (Test-TabLoft) {
   Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue |
     ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }
   Start-Sleep -Milliseconds 800
-  Ok 'Stopped the running TabMind so the new version can start'
+  Ok 'Stopped the running TabLoft so the new version can start'
 } elseif (Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue) {
   Warn "Port $Port is used by another program. Close it and run the installer again."
   exit 1
@@ -94,25 +94,25 @@ if (Test-TabMind) {
 # ---------------------------------------------------------------- 3. Shortcuts
 Step 'Creating shortcuts'
 New-Item -ItemType Directory -Force -Path $MenuDir | Out-Null
-New-Shortcut (Join-Path $MenuDir 'TabMind Library.lnk') 'wscript.exe' "`"$App\tabmind-open.vbs`"" 'Open your TabMind library'
-New-Shortcut (Join-Path $MenuDir 'Uninstall TabMind.lnk') 'cmd.exe' "/c `"$App\uninstall.cmd`"" 'Remove TabMind from this computer'
-Ok 'Start Menu > TabMind > TabMind Library'
+New-Shortcut (Join-Path $MenuDir 'TabLoft Library.lnk') 'wscript.exe' "`"$App\tabloft-open.vbs`"" 'Open your TabLoft library'
+New-Shortcut (Join-Path $MenuDir 'Uninstall TabLoft.lnk') 'cmd.exe' "/c `"$App\uninstall.cmd`"" 'Remove TabLoft from this computer'
+Ok 'Start Menu > TabLoft > TabLoft Library'
 
 if ($NoAutostart) {
   Remove-Item $StartupLnk -ErrorAction SilentlyContinue
   Note 'Auto-start skipped (-NoAutostart)'
 } else {
-  New-Shortcut $StartupLnk 'wscript.exe' "`"$App\tabmind-background.vbs`"" 'Start the TabMind server at login'
-  Ok 'TabMind will start automatically when you log in'
+  New-Shortcut $StartupLnk 'wscript.exe' "`"$App\tabloft-background.vbs`"" 'Start the TabLoft server at login'
+  Ok 'TabLoft will start automatically when you log in'
 }
 
 # ---------------------------------------------------------------- 4. Start
-Step 'Starting TabMind'
-Start-Process wscript.exe -ArgumentList "`"$App\tabmind-background.vbs`""
+Step 'Starting TabLoft'
+Start-Process wscript.exe -ArgumentList "`"$App\tabloft-background.vbs`""
 $up = $false
-for ($i = 0; $i -lt 40 -and -not $up; $i++) { Start-Sleep -Milliseconds 250; $up = Test-TabMind }
+for ($i = 0; $i -lt 40 -and -not $up; $i++) { Start-Sleep -Milliseconds 250; $up = Test-TabLoft }
 if (-not $up) {
-  Warn 'The server did not start. Run start-tabmind.cmd to see the error.'
+  Warn 'The server did not start. Run start-tabloft.cmd to see the error.'
   exit 1
 }
 $health = Invoke-RestMethod -Uri "$Url/api/health"
@@ -121,7 +121,7 @@ Note "Your library is stored in: $($health.data)"
 
 # ---------------------------------------------------------------- 5. Browser extension
 if (-not $NoBrowserSetup) {
-  Step 'Adding the TabMind button to your browsers'
+  Step 'Adding the TabLoft button to your browsers'
   $ext = Join-Path $App 'extension'
   $browsers = @(
     @{ Name = 'Google Chrome'; Page = 'chrome://extensions'; Paths = @(
@@ -150,22 +150,22 @@ if (-not $NoBrowserSetup) {
     Note '  1. Turn on "Developer mode" (a switch at the top right or bottom left)'
     Note '  2. Click "Load unpacked"'
     Note '  3. Paste the folder path (already copied for you: Ctrl+V) and click Select Folder'
-    Note '  4. Click the puzzle-piece icon and pin TabMind to the toolbar'
+    Note '  4. Click the puzzle-piece icon and pin TabLoft to the toolbar'
     Note ''
     Note "Extension folder: $ext"
-    Note 'Already added it before? Just click the reload arrow on the TabMind card instead.'
+    Note 'Already added it before? Just click the reload arrow on the TabLoft card instead.'
     foreach ($b in $found) {
       if (-not (Ask "Set up $($b.Name) now?")) { continue }
       Set-Clipboard -Value $ext
       Start-Process -FilePath $b.Exe -ArgumentList $b.Page
-      if (-not $Yes) { Read-Host "  Press Enter when TabMind is added to $($b.Name)" | Out-Null }
+      if (-not $Yes) { Read-Host "  Press Enter when TabLoft is added to $($b.Name)" | Out-Null }
     }
   }
 }
 
 # ---------------------------------------------------------------- Done
 Step 'Done'
-Ok 'TabMind is installed.'
-Note 'Open the library any time from Start Menu > TabMind Library.'
-Note 'Save tabs with the TabMind button in your browser, or Alt+Shift+S.'
+Ok 'TabLoft is installed.'
+Note 'Open the library any time from Start Menu > TabLoft Library.'
+Note 'Save tabs with the TabLoft button in your browser, or Alt+Shift+S.'
 if (-not $NoBrowserSetup -and (Ask 'Open the library now?')) { Start-Process $Url }

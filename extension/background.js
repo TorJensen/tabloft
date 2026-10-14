@@ -1,5 +1,5 @@
-// TabMind background worker: captures tabs (link + text + MHTML snapshot + screenshot)
-// and ships them to the local TabMind server.
+// TabLoft background worker: captures tabs (link + text + MHTML snapshot + screenshot)
+// and ships them to the local TabLoft server.
 import { CONSENT_SELECTORS, hideConsentInPage, restoreConsentInPage } from './consent.js';
 
 const DEFAULTS = {
@@ -252,10 +252,10 @@ chrome.commands.onCommand.addListener(cmd => {
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.removeAll(() => {
-    chrome.contextMenus.create({ id: 'save', title: 'Save tab to TabMind', contexts: ['page', 'action'] });
-    chrome.contextMenus.create({ id: 'save-close', title: 'Save tab to TabMind and close', contexts: ['page', 'action'] });
-    chrome.contextMenus.create({ id: 'save-link', title: 'Save link to TabMind', contexts: ['link'] });
-    chrome.contextMenus.create({ id: 'library', title: 'Open TabMind library', contexts: ['action'] });
+    chrome.contextMenus.create({ id: 'save', title: 'Save tab to TabLoft', contexts: ['page', 'action'] });
+    chrome.contextMenus.create({ id: 'save-close', title: 'Save tab to TabLoft and close', contexts: ['page', 'action'] });
+    chrome.contextMenus.create({ id: 'save-link', title: 'Save link to TabLoft', contexts: ['link'] });
+    chrome.contextMenus.create({ id: 'library', title: 'Open TabLoft library', contexts: ['action'] });
   });
 });
 
@@ -285,7 +285,7 @@ const newer = (a, b) => {
 async function checkExtensionUpdate() {
   if (running) return;
   try {
-    // Only the local TabMind server may trigger this, and only with a plain version number.
+    // Only the local TabLoft server may trigger this, and only with a plain version number.
     const { server } = await getSettings();
     if (!/^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/?$/.test(server)) return;
     const h = await api('/api/health');
@@ -299,7 +299,7 @@ async function checkExtensionUpdate() {
   } catch { /* server not running */ }
 }
 
-chrome.alarms.create('tabmind-update', { periodInMinutes: 15 });
-chrome.alarms.onAlarm.addListener(a => { if (a.name === 'tabmind-update') checkExtensionUpdate(); });
+chrome.alarms.create('tabloft-update', { periodInMinutes: 15 });
+chrome.alarms.onAlarm.addListener(a => { if (a.name === 'tabloft-update') checkExtensionUpdate(); });
 chrome.runtime.onStartup.addListener(checkExtensionUpdate);
 checkExtensionUpdate();

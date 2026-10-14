@@ -1,10 +1,10 @@
-# Publishes a TabMind release on GitHub so installed copies offer it as an update.
+# Publishes a TabLoft release on GitHub so installed copies offer it as an update.
 #
 #   1. bump "version" in package.json and extension/manifest.json (and the tray's AssemblyVersion)
 #   2. commit and push to main
 #   3. powershell -ExecutionPolicy Bypass -File build\release.ps1 -Notes "What changed, in a sentence or two"
 #
-# Builds the installer, then creates release v<version> with TabMind-Setup-<version>.exe attached.
+# Builds the installer, then creates release v<version> with TabLoft-Setup-<version>.exe attached.
 # Needs the GitHub CLI (gh), signed in.
 
 param([Parameter(Mandatory = $true)][string]$Notes, [switch]$SkipBuild)
@@ -14,7 +14,7 @@ $Root = Split-Path $PSScriptRoot -Parent
 Set-Location $Root
 $Version = (Get-Content package.json -Raw | ConvertFrom-Json).version
 $ExtVersion = (Get-Content extension\manifest.json -Raw | ConvertFrom-Json).version
-$TrayVersion = [regex]::Match((Get-Content desktop\TabMindTray.cs -Raw), 'AssemblyVersion\("(\d+\.\d+\.\d+)').Groups[1].Value
+$TrayVersion = [regex]::Match((Get-Content desktop\TabLoftTray.cs -Raw), 'AssemblyVersion\("(\d+\.\d+\.\d+)').Groups[1].Value
 if ($ExtVersion -ne $Version -or $TrayVersion -ne $Version) {
   throw "Versions differ: package.json $Version, extension $ExtVersion, tray $TrayVersion. Make them match first."
 }
@@ -28,9 +28,9 @@ $ErrorActionPreference = 'Stop'
 if ($exists) { throw "Release v$Version already exists. Bump the version first." }
 
 if (-not $SkipBuild) { & "$PSScriptRoot\build.ps1"; if ($LASTEXITCODE) { throw 'Build failed' } }
-$setup = Join-Path $Root "dist\TabMind-Setup-$Version.exe"
+$setup = Join-Path $Root "dist\TabLoft-Setup-$Version.exe"
 if (-not (Test-Path $setup)) { throw "Missing $setup" }
 
-& gh release create "v$Version" $setup --title "TabMind $Version" --notes $Notes --target main
+& gh release create "v$Version" $setup --title "TabLoft $Version" --notes $Notes --target main
 if ($LASTEXITCODE) { throw 'gh release create failed' }
-Write-Host "Released TabMind $Version. Installed copies will offer it within 12 hours (or via tray > Check for updates)." -ForegroundColor Green
+Write-Host "Released TabLoft $Version. Installed copies will offer it within 12 hours (or via tray > Check for updates)." -ForegroundColor Green

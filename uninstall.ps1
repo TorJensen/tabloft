@@ -1,4 +1,4 @@
-# Removes TabMind's shortcuts and auto-start and stops the server.
+# Removes TabLoft's shortcuts and auto-start and stops the server.
 # Your saved library is kept unless you choose to delete it.
 
 param([switch]$Yes, [switch]$DeleteData)
@@ -12,11 +12,11 @@ try { $dataDir = (Invoke-RestMethod -Uri "http://127.0.0.1:$Port/api/health" -Ti
 
 Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue |
   ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }
-Remove-Item (Join-Path $StartMenu 'Startup\TabMind.lnk') -ErrorAction SilentlyContinue
-Remove-Item (Join-Path $StartMenu 'TabMind') -Recurse -Force -ErrorAction SilentlyContinue
-Write-Host '[ok] TabMind stopped; shortcuts and auto-start removed.' -ForegroundColor Green
+Remove-Item (Join-Path $StartMenu 'Startup\TabLoft.lnk') -ErrorAction SilentlyContinue
+Remove-Item (Join-Path $StartMenu 'TabLoft') -Recurse -Force -ErrorAction SilentlyContinue
+Write-Host '[ok] TabLoft stopped; shortcuts and auto-start removed.' -ForegroundColor Green
 
-if (-not $dataDir) { $dataDir = Join-Path $env:LOCALAPPDATA 'TabMind' }
+if (-not $dataDir) { $dataDir = Join-Path $env:LOCALAPPDATA 'TabLoft' }
 if (Test-Path $dataDir) {
   Write-Host "Your library (saved tabs and snapshots) is in: $dataDir"
   $delete = $DeleteData
@@ -28,9 +28,9 @@ if (Test-Path $dataDir) {
     Remove-Item $dataDir -Recurse -Force
     Write-Host '[ok] Library deleted.' -ForegroundColor Green
   } else {
-    Write-Host '[ok] Library kept. Reinstalling TabMind will pick it up again.' -ForegroundColor Green
+    Write-Host '[ok] Library kept. Reinstalling TabLoft will pick it up again.' -ForegroundColor Green
   }
 }
 Write-Host ''
-Write-Host 'To finish, remove the TabMind extension in each browser (Extensions page > Remove).'
-Write-Host 'You can then delete the TabMind program folder.'
+Write-Host 'To finish, remove the TabLoft extension in each browser (Extensions page > Remove).'
+Write-Host 'You can then delete the TabLoft program folder.'

@@ -1,8 +1,8 @@
-# TabMind backlog
+# TabLoft backlog
 
 ## Done
 
-- **Desktop installer (v0.2).** `TabMind-Setup.exe` (about 23 MB) needs no Node.js and no admin rights. It adds a tray app, a Start Menu entry, optional autostart, an Add/Remove Programs entry, and an uninstaller that keeps the library. It also walks you through adding the extension to each browser. Built by `build/build.ps1`.
+- **Desktop installer (v0.2).** `TabLoft-Setup.exe` (about 23 MB) needs no Node.js and no admin rights. It adds a tray app, a Start Menu entry, optional autostart, an Add/Remove Programs entry, and an uninstaller that keeps the library. It also walks you through adding the extension to each browser. Built by `build/build.ps1`.
 
 - **Automatic updates (v0.3).** The tray app checks GitHub Releases and installs new versions in one click; the extension reloads itself afterwards.
 

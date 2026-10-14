@@ -162,7 +162,7 @@ function renderItems() {
     $('#empty').innerHTML = state.q
       ? `<h3>Nothing matches “${esc(state.q)}”.</h3><p>Search covers titles, URLs, notes, tags and the full text of saved pages.</p>`
       : state.filter.status === 'inbox'
-        ? `<h3>Inbox zero.</h3><p>Use the TabMind button in your browser to send tabs here. Everything you save lands in the Inbox until you sort it.</p>`
+        ? `<h3>Inbox zero.</h3><p>Use the TabLoft button in your browser to send tabs here. Everything you save lands in the Inbox until you sort it.</p>`
         : `<h3>Nothing here yet.</h3>`;
   }
   renderBulk();

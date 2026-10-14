@@ -37,7 +37,7 @@ try {
   if (current?.url) {
     const { items } = await fetch(base() + '/api/items/lookup?url=' + encodeURIComponent(current.url)).then(r => r.json());
     if (items.length) {
-      const badge = Object.assign(document.createElement('span'), { className: 'saved', textContent: '✓ Already in TabMind ' });
+      const badge = Object.assign(document.createElement('span'), { className: 'saved', textContent: '✓ Already in TabLoft ' });
       $('#current').prepend(badge);
     }
   }

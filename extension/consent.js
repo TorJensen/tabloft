@@ -33,9 +33,9 @@ export const CONSENT_SELECTORS = [
 export function hideConsentInPage(selectors) {
   const hidden = [];
   const hide = el => {
-    if (!el || el.dataset.tabmindHidden || el === document.body || el === document.documentElement) return;
+    if (!el || el.dataset.tabloftHidden || el === document.body || el === document.documentElement) return;
     hidden.push([el, el.style.getPropertyValue('display'), el.style.getPropertyPriority('display')]);
-    el.dataset.tabmindHidden = '1';
+    el.dataset.tabloftHidden = '1';
     el.style.setProperty('display', 'none', 'important');
   };
 
@@ -55,7 +55,7 @@ export function hideConsentInPage(selectors) {
   const topic = /cookie|consent|gdpr|samtykke|einwilligung|consentement|consenso|toestemming|zgod|privacy (settings|preferences|choices)/i;
   const action = /\b(accept|agree|allow|reject|decline|refuse|got it|ok|okay|i understand|manage|preferences|customi[sz]e|godkend|accepter|tillad|afvis|akzeptieren|zustimmen|ablehnen|alle|aceptar|rechazar|accetta|rifiuta|accepteren|weigeren|refuser)\b/i;
   for (const el of document.querySelectorAll('body *')) {
-    if (el.closest('[data-tabmind-hidden]')) continue;
+    if (el.closest('[data-tabloft-hidden]')) continue;
     const cs = getComputedStyle(el);
     const modal = el.getAttribute('role') === 'dialog' || el.getAttribute('role') === 'alertdialog' || el.getAttribute('aria-modal') === 'true';
     if (cs.position !== 'fixed' && cs.position !== 'sticky' && !modal) continue;
@@ -68,7 +68,7 @@ export function hideConsentInPage(selectors) {
   // 4. Once a banner is gone, also drop the dark full-screen backdrop it used.
   if (hidden.length) {
     for (const el of document.querySelectorAll('body *')) {
-      if (el.closest('[data-tabmind-hidden]')) continue;
+      if (el.closest('[data-tabloft-hidden]')) continue;
       const cs = getComputedStyle(el);
       if (cs.position !== 'fixed') continue;
       const r = el.getBoundingClientRect();
@@ -89,19 +89,19 @@ export function hideConsentInPage(selectors) {
     }
   }
 
-  window.__tabmindRestore = () => {
+  window.__tabloftRestore = () => {
     for (const [el, value, prio] of hidden) {
-      delete el.dataset.tabmindHidden;
+      delete el.dataset.tabloftHidden;
       if (value) el.style.setProperty('display', value, prio); else el.style.removeProperty('display');
     }
     for (const [el, style] of unlocked) {
       if (style === null) el.removeAttribute('style'); else el.setAttribute('style', style);
     }
-    delete window.__tabmindRestore;
+    delete window.__tabloftRestore;
   };
   return hidden.length;
 }
 
 export function restoreConsentInPage() {
-  if (window.__tabmindRestore) window.__tabmindRestore();
+  if (window.__tabloftRestore) window.__tabloftRestore();
 }

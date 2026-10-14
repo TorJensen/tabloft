@@ -1,6 +1,6 @@
 ﻿{
-  "name": "tabmind",
-  "version": "0.3.1",
+  "name": "tabloft",
+  "version": "0.4.0",
   "description": "Send browser tabs to a local library with snapshots. Close tabs without fear.",
   "private": true,
   "type": "module",

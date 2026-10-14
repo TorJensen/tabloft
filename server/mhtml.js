@@ -1,5 +1,5 @@
 // Minimal MHTML (multipart/related) parser + rewriter so snapshots saved by
-// chrome.pageCapture can be viewed offline inside the TabMind library.
+// chrome.pageCapture can be viewed offline inside the TabLoft library.
 import fs from 'node:fs';
 
 function decodeQP(str) {
@@ -131,7 +131,7 @@ function rewriteHtml(html, resolve, doc, extraCss) {
   else html = baseTag + html;
   // Extra CSS (e.g. hiding cookie banners) goes last so it wins over the page's own styles.
   if (extraCss) {
-    const tag = '<style id="tabmind-view">' + extraCss + '</style>';
+    const tag = '<style id="tabloft-view">' + extraCss + '</style>';
     const end = html.search(/<\/body>(?![\s\S]*<\/body>)/i);
     html = end >= 0 ? html.slice(0, end) + tag + html.slice(end) : html + tag;
   }
