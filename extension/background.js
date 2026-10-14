@@ -304,7 +304,8 @@ async function checkExtensionUpdate() {
   if (running) return;
   try {
     // Only for a copy loaded unpacked from the app folder; store installs are updated by the store.
-    if ((await chrome.management.getSelf()).installType !== 'development') return;
+    // (Store installs get an update_url in their manifest; unpacked copies don't. No extra permission needed.)
+    if (chrome.runtime.getManifest().update_url) return;
     // Only the local TabLoft server may trigger this, and only with a plain version number.
     const { server } = await getSettings();
     if (!/^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/?$/.test(server)) return;
