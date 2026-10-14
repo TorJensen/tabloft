@@ -1,13 +1,22 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { openDb, ftsQuery } from './db.js';
 import { loadMhtml, renderPart } from './mhtml.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = Number(process.env.TABMIND_PORT || 7878);
-const DATA = path.resolve(process.env.TABMIND_DATA || path.join(ROOT, 'data'));
+// Library data lives outside the app folder so updates/reinstalls never touch it.
+// (A data/ folder next to the app is still honoured for early installs.)
+function defaultDataDir() {
+  const legacy = path.join(ROOT, 'data');
+  if (fs.existsSync(path.join(legacy, 'tabmind.db'))) return legacy;
+  if (process.platform === 'win32' && process.env.LOCALAPPDATA) return path.join(process.env.LOCALAPPDATA, 'TabMind');
+  return path.join(os.homedir(), '.tabmind');
+}
+const DATA = path.resolve(process.env.TABMIND_DATA || defaultDataDir());
 const SNAPS = path.join(DATA, 'snapshots');
 const SCREENS = path.join(DATA, 'screens');
 const UI = path.join(ROOT, 'ui');

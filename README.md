@@ -9,33 +9,29 @@ Hundreds of open tabs are usually research threads, interesting ideas and things
 - **Tabs close only after they're safely stored.** If a save fails, that tab stays open.
 - **Organize later in the library.** Everything lands in the **Inbox**. From there you can triage into **Collections** and **Tags**, keep items in the **Library**, or **Archive** what you've finished. Full-text search covers every page you ever saved.
 
-Everything lives on your own computer, in `C:\TabMind\data`. There is no cloud and no account.
+Everything lives on your own computer. There is no cloud and no account.
 
 ---
 
-## Setup (one time)
+## Install
 
-**Requirement:** [Node.js](https://nodejs.org) 22.13 or newer. TabMind has no other dependencies and needs no `npm install`.
+1. **Get TabMind.** Run `git clone https://github.com/TorJensen/tabmind.git` in the folder where you want it, or download the ZIP from GitHub and unzip it. Any folder works, for example `C:\TabMind`.
+2. **Double-click `install.cmd`.** The installer:
+   - checks for [Node.js](https://nodejs.org) 22.13+ and offers to install it with winget if it's missing;
+   - adds **Start Menu > TabMind > TabMind Library** and starts TabMind silently at every login;
+   - starts TabMind and opens the Extensions page of each browser it finds (Chrome, Brave, Edge), with the extension folder path already copied to your clipboard.
+3. **In each browser**, turn on **Developer mode**, click **Load unpacked**, paste the path (Ctrl+V) and click **Select Folder**. Then pin the TabMind icon to the toolbar.
 
-### 1. Start the TabMind server
+All browsers save into the same library, and each item records which browser it came from.
 
-Double-click **`start-tabmind.cmd`**. The library is then at <http://127.0.0.1:7878>.
+| Script | What it does |
+|---|---|
+| `install.cmd` | Installs TabMind. Running it again repairs or reinstalls it. Options: `-NoAutostart`, `-NoBrowserSetup`, `-Yes` |
+| `update.cmd` | Pulls the latest version from GitHub and restarts TabMind. Your library is not touched |
+| `uninstall.cmd` | Removes the shortcuts and autostart. It asks before deleting your library and keeps it by default |
+| `start-tabmind.cmd` | Runs the server in a visible window, which is useful for seeing errors |
 
-To have it start silently every time you log in, double-click **`install-autostart.cmd`** once. `uninstall-autostart.cmd` undoes it.
-
-### 2. Install the extension in each browser
-
-Do this in each of Chrome, Brave and Edge:
-
-1. Open the extensions page:
-   - Chrome: `chrome://extensions`
-   - Brave: `brave://extensions`
-   - Edge: `edge://extensions`
-2. Turn on **Developer mode**.
-3. Click **Load unpacked** and choose `C:\TabMind\extension`.
-4. Pin the TabMind icon to the toolbar.
-
-All three browsers save into the same library, and each item records which browser it came from.
+After an update that changes the extension, click the reload arrow on the TabMind card on each browser's Extensions page.
 
 ---
 
@@ -75,14 +71,16 @@ All three browsers save into the same library, and each item records which brows
 
 ## Where your data is
 
+Your library is kept separate from the program, so updating or reinstalling never touches it:
+
 ```
-C:\TabMind\data\
+%LOCALAPPDATA%\TabMind\       (e.g. C:\Users\you\AppData\Local\TabMind)
   tabmind.db        SQLite database: links, titles, notes, tags, collections, page text
   snapshots\*.mhtml full offline copies of pages (also open directly in Chrome/Edge)
   screens\*.jpg     screenshots
 ```
 
-To **back up**, copy the `data` folder; do it while the server is stopped. To keep the library somewhere else (for example a synced folder), set the environment variable `TABMIND_DATA` to that folder before starting the server. Set `TABMIND_PORT` to change the port; if you do, also change the server address in the extension's Settings.
+To **back up**, copy that folder while TabMind is stopped. To keep the library somewhere else, set the environment variable `TABMIND_DATA` to that folder. Don't put it in a OneDrive or Dropbox folder that two computers use at once (see [BACKLOG.md](BACKLOG.md) for proper sync).
 
 ## How it works
 
