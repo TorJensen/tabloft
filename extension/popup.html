@@ -1,0 +1,61 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <img src="icons/32.png" alt="" width="20" height="20">
+    <h1>TabMind</h1>
+    <span id="conn" class="conn" title="Server status">…</span>
+  </header>
+
+  <section id="offline" class="offline" hidden>
+    <p><strong>TabMind server isn't running.</strong></p>
+    <p>Double-click <code>start-tabmind.cmd</code> in your TabMind folder, then reopen this popup.</p>
+  </section>
+
+  <main id="main">
+    <div id="current" class="current"></div>
+
+    <div class="grid">
+      <button data-scope="current" class="primary">Save this tab</button>
+      <button data-scope="selected" id="btn-selected">Save selected tabs</button>
+      <button data-scope="window" id="btn-window">Save this window</button>
+      <button data-scope="all" id="btn-all">Save all windows</button>
+      <button data-scope="left" id="btn-left">Save tabs to the left</button>
+      <button data-scope="right" id="btn-right">Save tabs to the right</button>
+    </div>
+
+    <label class="check"><input type="checkbox" id="close"> Close tabs after they're safely saved</label>
+
+    <details>
+      <summary>Tags, collection, note</summary>
+      <input id="tags" placeholder="Tags, comma separated (e.g. ai, to-read)">
+      <input id="collection" list="collections" placeholder="Collection (optional)">
+      <datalist id="collections"></datalist>
+      <textarea id="note" rows="2" placeholder="Why did you keep this? (optional)"></textarea>
+    </details>
+
+    <div id="progress" class="progress" hidden>
+      <div class="bar"><div id="bar-fill"></div></div>
+      <p id="progress-text"></p>
+    </div>
+  </main>
+
+  <footer>
+    <a href="#" id="open-library">Open library →</a>
+    <a href="#" id="toggle-settings">Settings</a>
+  </footer>
+
+  <section id="settings" class="settings" hidden>
+    <label>Server address <input id="server"></label>
+    <label class="check"><input type="checkbox" id="loadUnloaded"> Wake sleeping tabs so they can be snapshotted</label>
+    <label class="check"><input type="checkbox" id="screenshots"> Screenshot visible tabs</label>
+    <label class="check"><input type="checkbox" id="skipPinned"> Never close pinned tabs in bulk saves</label>
+  </section>
+
+  <script src="popup.js" type="module"></script>
+</body>
+</html>

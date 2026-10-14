@@ -1,0 +1,11 @@
+{
+  "name": "tabmind",
+  "version": "0.1.0",
+  "description": "Send browser tabs to a local library with snapshots. Close tabs without fear.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server/server.js"
+  },
+  "engines": { "node": ">=22.13" }
+}

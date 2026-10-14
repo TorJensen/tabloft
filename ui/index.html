@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TabMind</title>
+  <link rel="icon" href="favicon.png">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <aside id="sidebar">
+    <div class="brand"><img src="favicon.png" alt="" width="22" height="22"> TabMind</div>
+    <nav id="nav-main"></nav>
+    <div class="nav-head">Collections <button id="new-collection" class="icon-btn" title="New collection">+</button></div>
+    <nav id="nav-collections"></nav>
+    <div class="nav-head">Tags</div>
+    <nav id="nav-tags"></nav>
+    <div class="nav-head">Sites</div>
+    <nav id="nav-domains"></nav>
+    <div class="nav-head">Browsers</div>
+    <nav id="nav-browsers"></nav>
+  </aside>
+
+  <div id="content">
+    <header id="toolbar">
+      <button id="menu" class="icon-btn mobile-only" title="Menu">☰</button>
+      <input id="search" type="search" placeholder="Search titles, notes, tags and full page text…  ( / )" autocomplete="off">
+      <select id="sort" title="Sort">
+        <option value="newest">Newest</option>
+        <option value="oldest">Oldest</option>
+        <option value="title">Title</option>
+        <option value="domain">Site</option>
+        <option value="relevance">Best match</option>
+      </select>
+      <div class="seg" id="view">
+        <button data-view="grid" title="Grid">▦</button>
+        <button data-view="list" title="List">☰</button>
+      </div>
+    </header>
+
+    <div id="heading">
+      <h2 id="title"></h2>
+      <span id="count"></span>
+      <button id="select-all" class="link-btn">Select all</button>
+    </div>
+
+    <div id="bulk" hidden>
+      <span id="bulk-count"></span>
+      <button data-bulk="kept">Keep</button>
+      <button data-bulk="archived">Archive</button>
+      <button data-bulk="inbox">Back to inbox</button>
+      <button data-bulk="tag">Add tag…</button>
+      <button data-bulk="collection">Move to collection…</button>
+      <button data-bulk="open">Open live</button>
+      <button data-bulk="delete" class="danger">Delete</button>
+      <button data-bulk="clear" class="link-btn">Clear</button>
+    </div>
+
+    <main id="items"></main>
+    <div id="more-wrap"><button id="more" hidden>Load more</button></div>
+    <div id="empty" hidden></div>
+  </div>
+
+  <div id="drawer" hidden>
+    <div class="drawer-head">
+      <div class="drawer-actions">
+        <button id="d-close" class="icon-btn" title="Close (Esc)">✕</button>
+        <button id="d-prev" class="icon-btn" title="Previous (k)">↑</button>
+        <button id="d-next" class="icon-btn" title="Next (j)">↓</button>
+        <span class="spacer"></span>
+        <button id="d-star" class="icon-btn" title="Star (s)">☆</button>
+        <a id="d-open" class="btn" target="_blank" rel="noopener">Open live ↗</a>
+        <button id="d-keep" class="btn">Keep</button>
+        <button id="d-archive" class="btn">Archive (e)</button>
+        <button id="d-delete" class="btn danger" title="Delete">Delete</button>
+      </div>
+      <input id="d-title" class="d-title">
+      <div class="d-meta" id="d-meta"></div>
+      <div class="d-fields">
+        <label>Collection <select id="d-collection"></select></label>
+        <label class="grow">Tags <span id="d-tags" class="tag-editor"></span></label>
+      </div>
+      <textarea id="d-note" rows="2" placeholder="Notes — why this matters, what to do with it…"></textarea>
+      <div class="seg" id="d-tabs">
+        <button data-tab="snapshot">Snapshot</button>
+        <button data-tab="screenshot">Screenshot</button>
+        <button data-tab="text">Text</button>
+      </div>
+    </div>
+    <div class="drawer-body" id="d-body"></div>
+  </div>
+
+  <dialog id="prompt">
+    <form method="dialog">
+      <p id="prompt-label"></p>
+      <input id="prompt-input" list="prompt-list" autocomplete="off">
+      <datalist id="prompt-list"></datalist>
+      <menu><button value="cancel">Cancel</button><button value="ok" class="primary">OK</button></menu>
+    </form>
+  </dialog>
+
+  <div id="toast" hidden></div>
+  <script src="app.js" type="module"></script>
+</body>
+</html>
