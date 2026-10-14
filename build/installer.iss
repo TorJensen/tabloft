@@ -16,6 +16,8 @@ AppPublisher=Tor Jensen
 AppComments=Send browser tabs to a local library with snapshots, then close them without fear.
 PrivilegesRequired=lowest
 DefaultDirName={autopf}\TabLoft
+; Always install to the TabLoft folder, so installs from before the rename move out of ...\TabMind.
+UsePreviousAppDir=no
 DisableProgramGroupPage=yes
 DisableDirPage=auto
 DisableReadyPage=yes
@@ -46,8 +48,8 @@ Type: files; Name: "{userstartup}\TabLoft.lnk"
 Type: filesandordirs; Name: "{userprograms}\TabLoft"
 Type: files; Name: "{userstartup}\TabMind.lnk"
 Type: filesandordirs; Name: "{userprograms}\TabMind"
-; Program files and shortcuts from before the rename (TabMind). An existing install keeps its
-; folder so the browser extension, loaded from {app}\extension, keeps working.
+; Program files and shortcuts from before the rename (TabMind). The old install folder itself is
+; removed after installing (see CurStepChanged).
 Type: files; Name: "{app}\TabMind.exe"
 Type: files; Name: "{app}\tabmind-server.exe"
 Type: files; Name: "{autoprograms}\TabMind.lnk"
@@ -87,6 +89,22 @@ begin
     '{ Get-NetTCPConnection -LocalPort 7878 -State Listen | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force } } } catch {}"',
     '', SW_HIDE, ewWaitUntilTerminated, Code);
   Sleep(500);
+end;
+
+// Remove the install folder from before the rename (%LOCALAPPDATA%\Programs\TabMind) once the new
+// one is in place - only if it really is a TabMind/TabLoft install, never the library.
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  OldDir: String;
+begin
+  if CurStep = ssPostInstall then
+  begin
+    OldDir := ExpandConstant('{autopf}\TabMind');
+    if (CompareText(OldDir, ExpandConstant('{app}')) <> 0) and DirExists(OldDir) and
+       (FileExists(OldDir + '\tabmind-server.exe') or FileExists(OldDir + '\tabloft-server.exe') or
+        FileExists(OldDir + '\TabMind.exe') or FileExists(OldDir + '\TabLoft.exe')) then
+      DelTree(OldDir, True, True, True);
+  end;
 end;
 
 function PrepareToInstall(var NeedsRestart: Boolean): String;
