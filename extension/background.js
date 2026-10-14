@@ -148,6 +148,21 @@ async function capturePage(t, live, opts, settings) {
 
 let running = null;
 
+// ---------- is the TabLoft app running? ----------
+// The library lives in the desktop app; without it nothing can be saved. The popup and a
+// notification on a failed save tell people to open it.
+const OFFLINE_MSG = 'The TabLoft app isn\'t running, so nothing was saved and no tabs were closed. Open TabLoft from the Start menu, then try again.';
+
+async function checkApp() {
+  try { return (await api('/api/health')).app === 'TabLoft'; } catch { return false; }
+}
+
+function notifyOffline() {
+  chrome.notifications.create('tabloft-offline', {
+    type: 'basic', iconUrl: 'icons/128.png', title: 'Open TabLoft to save tabs', message: OFFLINE_MSG, priority: 2,
+  });
+}
+
 function broadcast(progress) {
   chrome.storage.session.set({ progress }).catch(() => {});
   chrome.runtime.sendMessage({ type: 'progress', progress }).catch(() => {});
@@ -158,6 +173,7 @@ function broadcast(progress) {
 // Save a list of tabs; optionally close the ones that saved successfully.
 export async function saveTabs(tabs, opts = {}) {
   if (running) return { error: 'A save is already in progress' };
+  if (!(await checkApp())) { notifyOffline(); return { error: OFFLINE_MSG }; }
   const settings = await getSettings();
   const close = opts.close ?? settings.closeAfterSave;
   const progress = { total: tabs.length, finished: 0, saved: 0, snapshots: 0, failed: 0, skipped: 0, done: false, errors: [] };
@@ -243,6 +259,7 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
     return true;
   }
   if (msg.type === 'status') { reply({ running }); return false; }
+  if (msg.type === 'check-app') { checkApp().then(online => reply({ online })); return true; }
 });
 
 chrome.commands.onCommand.addListener(cmd => {
@@ -264,6 +281,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === 'save-close') saveTabs([tab], { close: true });
   if (info.menuItemId === 'library') chrome.tabs.create({ url: (await getSettings()).server });
   if (info.menuItemId === 'save-link') {
+    if (!(await checkApp())) { notifyOffline(); return; }
     await api('/api/items', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

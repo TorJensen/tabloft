@@ -42,10 +42,16 @@ try {
     }
   }
 } catch {
-  $('#conn').textContent = '● offline';
+  $('#conn').textContent = '● app not running';
   $('#conn').className = 'conn bad';
   $('#offline').hidden = false;
   $('#main').hidden = true;
+  $('#open-library').hidden = true;
+  $('#recheck').onclick = async () => {
+    $('#recheck').textContent = 'Checking…';
+    await chrome.runtime.sendMessage({ type: 'check-app' }).catch(() => {});
+    location.reload();
+  };
 }
 
 // Saving

@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "TabLoft",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Send tabs to your TabLoft library — link + full snapshot — then close them without fear.",
-  "permissions": ["tabs", "pageCapture", "scripting", "contextMenus", "storage", "alarms"],
+  "permissions": ["tabs", "pageCapture", "scripting", "contextMenus", "storage", "alarms", "notifications"],
   "host_permissions": ["<all_urls>"],
   "background": { "service_worker": "background.js", "type": "module" },
   "action": {
