@@ -21,8 +21,11 @@ if ($ExtVersion -ne $Version -or $TrayVersion -ne $Version) {
 if (git status --porcelain) { throw 'You have uncommitted changes. Commit and push them first.' }
 $branch = git rev-parse --abbrev-ref HEAD
 if ($branch -ne 'main') { throw "Releases are made from main (you are on $branch)." }
+$ErrorActionPreference = 'Continue'   # gh writes "release not found" to stderr, which is the good case here
 & gh release view "v$Version" *> $null
-if ($LASTEXITCODE -eq 0) { throw "Release v$Version already exists. Bump the version first." }
+$exists = $LASTEXITCODE -eq 0
+$ErrorActionPreference = 'Stop'
+if ($exists) { throw "Release v$Version already exists. Bump the version first." }
 
 if (-not $SkipBuild) { & "$PSScriptRoot\build.ps1"; if ($LASTEXITCODE) { throw 'Build failed' } }
 $setup = Join-Path $Root "dist\TabMind-Setup-$Version.exe"
