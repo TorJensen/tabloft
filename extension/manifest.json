@@ -1,19 +1,53 @@
 {
   "manifest_version": 3,
   "name": "TabLoft",
-  "version": "0.4.2",
-  "description": "Send tabs to your TabLoft library — link + full snapshot — then close them without fear.",
-  "permissions": ["tabs", "pageCapture", "scripting", "contextMenus", "storage", "alarms", "notifications"],
-  "host_permissions": ["<all_urls>"],
-  "background": { "service_worker": "background.js", "type": "module" },
+  "version": "0.4.3",
+  "description": "Save tabs with a full offline snapshot to the TabLoft desktop app, then close them without fear. Needs the free TabLoft app.",
+  "permissions": [
+    "tabs",
+    "pageCapture",
+    "scripting",
+    "contextMenus",
+    "storage",
+    "alarms",
+    "notifications"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
   "action": {
     "default_popup": "popup.html",
     "default_title": "TabLoft",
-    "default_icon": { "16": "icons/16.png", "32": "icons/32.png", "48": "icons/48.png", "128": "icons/128.png" }
+    "default_icon": {
+      "16": "icons/16.png",
+      "32": "icons/32.png",
+      "48": "icons/48.png",
+      "128": "icons/128.png"
+    }
   },
-  "icons": { "16": "icons/16.png", "32": "icons/32.png", "48": "icons/48.png", "128": "icons/128.png" },
+  "icons": {
+    "16": "icons/16.png",
+    "32": "icons/32.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  },
   "commands": {
-    "save-tab": { "suggested_key": { "default": "Alt+Shift+S" }, "description": "Save current tab to TabLoft" },
-    "save-close-tab": { "suggested_key": { "default": "Alt+Shift+X" }, "description": "Save current tab to TabLoft and close it" }
-  }
+    "save-tab": {
+      "suggested_key": {
+        "default": "Alt+Shift+S"
+      },
+      "description": "Save current tab to TabLoft"
+    },
+    "save-close-tab": {
+      "suggested_key": {
+        "default": "Alt+Shift+X"
+      },
+      "description": "Save current tab to TabLoft and close it"
+    }
+  },
+  "homepage_url": "https://github.com/TorJensen/tabloft"
 }

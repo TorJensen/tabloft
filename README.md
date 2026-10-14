@@ -94,6 +94,10 @@ After an update that changes the extension, click the reload arrow on the TabLof
 
 ---
 
+## Browser stores
+
+The extension is being prepared for the Chrome Web Store (which Brave also uses) and Edge Add-ons. Everything for the submission is in [`store/listing.md`](store/listing.md): listing text, permission justifications, data-use answers and images. The privacy policy is in [PRIVACY.md](PRIVACY.md). To build the upload zip, run `powershell -ExecutionPolicy Bypass -File build\package-extension.ps1`, which writes `dist\tabloft-extension-<version>.zip`.
+
 ## Where your data is
 
 Your library is kept separate from the program, so updating or reinstalling never touches it:
