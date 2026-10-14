@@ -4,11 +4,13 @@
 
 - **Desktop installer (v0.2).** `TabMind-Setup.exe` (about 23 MB) needs no Node.js and no admin rights. It adds a tray app, a Start Menu entry, optional autostart, an Add/Remove Programs entry, and an uninstaller that keeps the library. It also walks you through adding the extension to each browser. Built by `build/build.ps1`.
 
+- **Automatic updates (v0.3).** The tray app checks GitHub Releases and installs new versions in one click; the extension reloads itself afterwards.
+
 ## Next
 
 - **Code-sign the installer and exes** so SmartScreen stops warning about an unknown publisher. This needs a code-signing certificate, or Azure Trusted Signing (about $10/month).
 - **Publish the extension** to the Chrome Web Store ($5 one-time fee; Brave uses the Chrome store too) and to Edge Add-ons (free). This removes the "Load unpacked" and developer-mode steps and the startup warning, and gives automatic extension updates.
-- **Update check.** The tray app checks GitHub Releases and offers the new Setup.
+
 
 ## Later
 

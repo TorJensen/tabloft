@@ -21,7 +21,7 @@ Everything lives on your own computer. There is no cloud and no account.
 2. On the last page, leave **"Add the TabMind button to my browsers"** ticked. TabMind finds Chrome, Brave and Edge and opens each one's Extensions page. Turn on **Developer mode**, click **Load unpacked**, press Ctrl+V (the folder path is already copied) and click **Select Folder**. Then pin TabMind to the toolbar.
 3. TabMind lives in the **system tray** (by the clock). Left-click the icon to open your library. Right-click it for: add to browsers, start at login, show library folder, restart, and quit.
 
-To update, run a newer Setup over the existing install; your library is never touched. To uninstall, go to **Settings > Apps > TabMind > Uninstall**. The uninstaller asks before deleting your library and keeps it by default.
+**Updates are automatic.** TabMind checks [GitHub Releases](https://github.com/TorJensen/tabmind/releases) shortly after it starts, then twice a day. When a new version exists, it shows a notification; click it, or choose **Update to …** in the tray menu. The update downloads and installs in the background, and the browser extension reloads itself afterwards. Your library is never touched. You can also check by hand with **Check for updates…** in the tray menu, or switch automatic checks off there. Updates are only downloaded over HTTPS from this repo's releases. To uninstall, go to **Settings > Apps > TabMind > Uninstall**. The uninstaller asks before deleting your library and keeps it by default.
 
 > Windows SmartScreen may warn that the installer is from an unknown publisher, because it isn't code-signed yet. Click **More info > Run anyway**.
 
@@ -30,6 +30,11 @@ To update, run a newer Setup over the existing install; your library is never to
 - `server/` and `ui/` are packed into `tabmind-server.exe`, a single executable with Node built in;
 - the tray app `desktop/TabMindTray.cs` is compiled with the C# compiler that ships with Windows;
 - `build/installer.iss` (Inno Setup) wraps both into the installer.
+
+**Publishing a new version** (developers):
+1. Bump the version in `package.json`, `extension/manifest.json` and the `AssemblyVersion` in `desktop/TabMindTray.cs`.
+2. Commit and push to `main`.
+3. Run `powershell -ExecutionPolicy Bypass -File build\release.ps1 -Notes "what changed"`. This builds the installer and creates GitHub release `v<version>` with it attached. Every installed copy then offers the update.
 
 ### From source, with scripts (needs Node.js)
 
