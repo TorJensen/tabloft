@@ -7,7 +7,7 @@
 Hundreds of open tabs are usually research threads, interesting ideas and things to read later. Closing them feels like losing them, so nothing gets closed and nothing can be found. TabLoft gives every tab a safe home outside the browser:
 
 - **One click sends tabs to TabLoft**: this tab, selected tabs, the whole window, or every window. It works from Chrome, Brave and Edge.
-- **Each tab is stored twice.** You get the **link** plus a **snapshot** of the page as it looked: a full offline copy (MHTML), a screenshot of the visible tab, and the page text so you can search it.
+- **Each tab is stored twice.** You get the **link** plus a **snapshot** of the page as it looked: a full offline copy (MHTML), a screenshot, and the page text so you can search it.
 - **Tabs close only after they're safely stored.** If a save fails, that tab stays open.
 - **Organize later in the library.** Everything lands in the **Inbox**. From there you can triage into **Collections** and **Tags**, keep items in the **Library**, or **Archive** what you've finished. Full-text search covers every page you ever saved.
 
@@ -129,7 +129,7 @@ To **back up**, copy that folder while TabLoft is stopped. To keep the library s
 
 ## Known limitations (v0.1)
 
-- **Screenshots:** only the tab that is visible in its window gets a screenshot. Browsers can't screenshot background tabs. Every saved tab still gets a full MHTML snapshot.
+- **Screenshots:** browsers can only screenshot the tab that is showing, so TabLoft briefly brings each tab to the front while saving (about half a second per tab), then returns each window to the tab you were on. You can switch this off in the extension's Settings; then only the visible tab gets a screenshot. Minimized windows get no screenshots.
 - **Missing fonts and images:** fonts or lazy-loaded images that the page hadn't loaded yet aren't in the snapshot. The snapshot then uses fallback fonts, and it loads missing images from the live site if that site is still online.
 - **Re-saving a page:** saving the same URL again refreshes its snapshot instead of keeping a history of versions.
 - **Firefox:** not supported yet. It doesn't have the `pageCapture` API.

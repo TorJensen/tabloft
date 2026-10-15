@@ -19,5 +19,5 @@
 - **Auto-suggested tags and collections** based on page content.
 - **Resurface.** A weekly "you saved these and never looked" view of the Inbox.
 - **Firefox support.** Firefox has no `pageCapture`, so it would need another way to make snapshots, such as a SingleFile-style capture.
-- **Screenshots of background tabs.** Today only the visible tab gets one; this would need briefly activating each tab, as an option.
+
 - **Smaller installer.** Most of the size is the bundled Node runtime.

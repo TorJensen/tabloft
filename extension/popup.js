@@ -1,14 +1,14 @@
 const $ = s => document.querySelector(s);
-const DEFAULTS = { server: 'http://127.0.0.1:7878', closeAfterSave: true, loadUnloaded: true, screenshots: true, skipPinned: true, hideConsent: true };
+const DEFAULTS = { server: 'http://127.0.0.1:7878', closeAfterSave: true, loadUnloaded: true, screenshots: true, skipPinned: true, hideConsent: true, screenshotAll: true };
 let settings = { ...DEFAULTS, ...(await chrome.storage.local.get(Object.keys(DEFAULTS))) };
 const base = () => settings.server.replace(/\/$/, '');
 
 // Settings
 $('#server').value = settings.server;
 $('#close').checked = settings.closeAfterSave;
-for (const k of ['loadUnloaded', 'screenshots', 'skipPinned', 'hideConsent']) $('#' + k).checked = settings[k];
+for (const k of ['loadUnloaded', 'screenshots', 'screenshotAll', 'skipPinned', 'hideConsent']) $('#' + k).checked = settings[k];
 $('#close').onchange = e => chrome.storage.local.set({ closeAfterSave: e.target.checked });
-for (const k of ['loadUnloaded', 'screenshots', 'skipPinned', 'hideConsent']) $('#' + k).onchange = e => chrome.storage.local.set({ [k]: e.target.checked });
+for (const k of ['loadUnloaded', 'screenshots', 'screenshotAll', 'skipPinned', 'hideConsent']) $('#' + k).onchange = e => chrome.storage.local.set({ [k]: e.target.checked });
 $('#server').onchange = async e => { await chrome.storage.local.set({ server: e.target.value.trim() }); location.reload(); };
 $('#toggle-settings').onclick = e => { e.preventDefault(); $('#settings').hidden = !$('#settings').hidden; };
 $('#open-library').onclick = e => { e.preventDefault(); chrome.tabs.create({ url: base() }); window.close(); };

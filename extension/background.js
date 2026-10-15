@@ -6,7 +6,8 @@ const DEFAULTS = {
   server: 'http://127.0.0.1:7878',
   closeAfterSave: true,
   loadUnloaded: true,     // reload sleeping/discarded tabs so they can be snapshotted
-  screenshots: true,      // screenshot tabs that are currently visible
+  screenshots: true,      // take screenshots of saved tabs
+  screenshotAll: true,    // ...of every tab, by briefly bringing each one to the front
   skipPinned: true,       // bulk saves never close pinned tabs
   hideConsent: true,      // hide cookie banners while capturing (restored right after)
 };
@@ -56,6 +57,34 @@ async function pageInfo(tabId) {
   } catch {
     return {};
   }
+}
+
+// Browsers can only screenshot the tab that is showing in its window, and Chrome allows about
+// two captures a second. So screenshots go one at a time through this queue: bring the tab to
+// the front if needed, let it paint, capture, move on. Snapshots still run in parallel.
+let shotQueue = Promise.resolve();
+let lastShot = 0;
+function screenshotInTurn(tab, bringToFront) {
+  const run = shotQueue.then(async () => {
+    const wait = 550 - (Date.now() - lastShot);
+    if (wait > 0) await sleep(wait);
+    try {
+      if (bringToFront) {
+        const win = await chrome.windows.get(tab.windowId);
+        if (win.state === 'minimized') return null; // nothing is drawn in a minimized window
+        const t = await chrome.tabs.update(tab.id, { active: true });
+        if (!t) return null;
+        await sleep(350); // let the page paint after switching
+      }
+      return await screenshot(tab);
+    } catch {
+      return null;
+    } finally {
+      lastShot = Date.now();
+    }
+  });
+  shotQueue = run.catch(() => {});
+  return run;
 }
 
 async function screenshot(tab) {
@@ -111,7 +140,8 @@ async function captureTab(tab, opts, settings) {
 
 async function capturePage(t, live, opts, settings) {
   const info = live ? await pageInfo(t.id) : {};
-  const shot = live && t.active && settings.screenshots ? await screenshot(t) : null;
+  const wantShot = live && settings.screenshots && (t.active || settings.screenshotAll);
+  const shot = wantShot ? await screenshotInTurn(t, !t.active) : null;
 
   const saved = await api('/api/items', {
     method: 'POST',
@@ -180,6 +210,8 @@ export async function saveTabs(tabs, opts = {}) {
   const toClose = [];
   running = progress;
   broadcast(progress);
+  // Remember which tab was showing in each window, to go back to it afterwards.
+  const shownBefore = await chrome.tabs.query({ active: true, windowType: 'normal' });
 
   const queue = [...tabs];
   const worker = async () => {
@@ -203,6 +235,9 @@ export async function saveTabs(tabs, opts = {}) {
   try {
     await Promise.all(Array.from({ length: Math.min(4, tabs.length) }, worker));
     if (toClose.length) await closeSafely(toClose);
+    if (settings.screenshots && settings.screenshotAll) {
+      for (const t of shownBefore) await chrome.tabs.update(t.id, { active: true }).catch(() => {}); // fails harmlessly if it was closed
+    }
   } finally {
     progress.done = true;
     progress.closed = toClose.length;
