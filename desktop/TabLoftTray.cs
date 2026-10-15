@@ -23,7 +23,7 @@ using Microsoft.Win32;
 
 [assembly: System.Reflection.AssemblyTitle("TabLoft")]
 [assembly: System.Reflection.AssemblyProduct("TabLoft")]
-[assembly: System.Reflection.AssemblyVersion("0.4.3.0")]
+[assembly: System.Reflection.AssemblyVersion("0.4.4.0")]
 
 static class TabLoftTray
 {
