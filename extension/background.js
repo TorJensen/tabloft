@@ -215,11 +215,14 @@ export async function saveTabs(tabs, opts = {}) {
   const settings = await getSettings();
   const close = opts.close ?? settings.closeAfterSave;
   const progress = { total: tabs.length, finished: 0, saved: 0, snapshots: 0, failed: 0, skipped: 0, done: false, errors: [] };
-  const toClose = [];
+  const closed = [];
   running = progress;
   broadcast(progress);
   // Remember which tab was showing in each window, to go back to it afterwards.
   const shownBefore = await chrome.tabs.query({ active: true, windowType: 'normal' });
+  // Tabs close one by one as each is saved, so after a stall you can see what made it in.
+  const closable = t => !(t.pinned && settings.skipPinned && tabs.length > 1);
+  if (close) await keepBrowserOpen(tabs.filter(closable));
 
   const queue = [...tabs];
   const worker = async () => {
@@ -231,7 +234,10 @@ export async function saveTabs(tabs, opts = {}) {
         if (r.ok) {
           progress.saved++;
           if (r.snapshot) progress.snapshots++;
-          if (close && !(tab.pinned && settings.skipPinned && tabs.length > 1)) toClose.push(tab);
+          if (close && closable(tab)) {
+            // Only after the item (and snapshot) reached the library.
+            if (await chrome.tabs.remove(tab.id).then(() => true, () => false)) closed.push(tab);
+          }
         } else if (r.skipped) progress.skipped++;
       } catch (e) {
         progress.failed++;
@@ -243,33 +249,26 @@ export async function saveTabs(tabs, opts = {}) {
   };
   try {
     await Promise.all(Array.from({ length: Math.min(4, tabs.length) }, worker));
-    if (toClose.length) await withTimeout(closeSafely(toClose), 30000, 'Closing tabs').catch(e => progress.errors.push(e.message));
     if (settings.screenshots && settings.screenshotAll) {
       for (const t of shownBefore) await chrome.tabs.update(t.id, { active: true }).catch(() => {}); // fails harmlessly if it was closed
     }
   } finally {
     progress.done = true;
-    progress.closed = toClose.length;
+    progress.closed = closed.length;
     running = null;
     broadcast(progress);
   }
   return progress;
 }
 
-// Close tabs, but never let the browser quit: if a window would be emptied, leave the library open in it.
-async function closeSafely(tabs) {
+// If closing these tabs would empty every window (and so quit the browser), open the library first.
+async function keepBrowserOpen(tabs) {
   const ids = new Set(tabs.map(t => t.id));
-  const byWindow = new Map();
-  for (const t of tabs) byWindow.set(t.windowId, (byWindow.get(t.windowId) || 0) + 1);
   const windows = await chrome.windows.getAll({ populate: true, windowTypes: ['normal'] });
-  const emptied = windows.filter(w => w.tabs.every(t => ids.has(t.id)));
-  if (emptied.length && emptied.length === windows.length) {
+  if (windows.length && windows.every(w => w.tabs.every(t => ids.has(t.id)))) {
     const { server } = await getSettings();
-    await chrome.tabs.create({ windowId: emptied[0].id, url: server, active: true });
+    await chrome.tabs.create({ windowId: windows[0].id, url: server, active: true });
   }
-  await chrome.tabs.remove([...ids]).catch(async () => {
-    for (const id of ids) await chrome.tabs.remove(id).catch(() => {});
-  });
 }
 
 export async function tabsFor(scope) {
