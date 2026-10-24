@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TabLoft",
-  "version": "0.4.5",
+  "version": "0.4.6",
   "description": "Save tabs with a full offline snapshot to the TabLoft desktop app, then close them without fear. Needs the free TabLoft app.",
   "permissions": [
     "tabs",
