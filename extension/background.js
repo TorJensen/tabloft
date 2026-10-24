@@ -28,6 +28,14 @@ function detectBrowser() {
 const capturable = url => /^https?:\/\//i.test(url || '');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
+// Browser APIs (pageCapture, captureVisibleTab, executeScript on a frozen tab) can hang forever
+// on some pages. Every step that talks to a tab gets a deadline so one bad tab can't stall a save.
+function withTimeout(promise, ms, label) {
+  let timer;
+  const deadline = new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(`${label} timed out`)), ms); });
+  return Promise.race([promise, deadline]).finally(() => clearTimeout(timer));
+}
+
 async function waitForLoad(tabId, timeoutMs = 25000) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
@@ -41,7 +49,7 @@ async function waitForLoad(tabId, timeoutMs = 25000) {
 
 async function pageInfo(tabId) {
   try {
-    const [{ result }] = await chrome.scripting.executeScript({
+    const [{ result }] = await withTimeout(chrome.scripting.executeScript({
       target: { tabId },
       func: () => {
         const meta = n => document.querySelector(`meta[property="${n}"],meta[name="${n}"]`)?.content || null;
@@ -52,7 +60,7 @@ async function pageInfo(tabId) {
           text: (document.body?.innerText || '').slice(0, 1_000_000),
         };
       },
-    });
+    }), 15000, 'Reading page');
     return result || {};
   } catch {
     return {};
@@ -65,7 +73,7 @@ async function pageInfo(tabId) {
 let shotQueue = Promise.resolve();
 let lastShot = 0;
 function screenshotInTurn(tab, bringToFront) {
-  const run = shotQueue.then(async () => {
+  const run = shotQueue.then(() => withTimeout((async () => {
     const wait = 550 - (Date.now() - lastShot);
     if (wait > 0) await sleep(wait);
     try {
@@ -82,14 +90,14 @@ function screenshotInTurn(tab, bringToFront) {
     } finally {
       lastShot = Date.now();
     }
-  });
-  shotQueue = run.catch(() => {});
+  })(), 10000, 'Screenshot')).catch(() => null);
+  shotQueue = run;
   return run;
 }
 
 async function screenshot(tab) {
   try {
-    const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'jpeg', quality: 70 });
+    const dataUrl = await withTimeout(chrome.tabs.captureVisibleTab(tab.windowId, { format: 'jpeg', quality: 70 }), 5000, 'Capture');
     // Downscale to keep the library light.
     const bmp = await createImageBitmap(await (await fetch(dataUrl)).blob());
     const scale = Math.min(1, 1280 / bmp.width);
@@ -107,7 +115,7 @@ async function screenshot(tab) {
 
 async function api(path, opts = {}) {
   const { server } = await getSettings();
-  const res = await fetch(server.replace(/\/$/, '') + path, opts);
+  const res = await fetch(server.replace(/\/$/, '') + path, { ...opts, signal: AbortSignal.timeout(60000) });
   if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
   return res.json();
 }
@@ -164,7 +172,7 @@ async function capturePage(t, live, opts, settings) {
   let snapshot = false;
   if (live) {
     try {
-      const blob = await chrome.pageCapture.saveAsMHTML({ tabId: t.id });
+      const blob = await withTimeout(chrome.pageCapture.saveAsMHTML({ tabId: t.id }), 30000, 'Snapshot');
       if (blob?.size) {
         await api(`/api/items/${saved.id}/snapshot`, { method: 'PUT', headers: { 'Content-Type': 'multipart/related' }, body: blob });
         snapshot = true;
@@ -218,7 +226,8 @@ export async function saveTabs(tabs, opts = {}) {
     while (queue.length) {
       const tab = queue.shift();
       try {
-        const r = await captureTab(tab, opts, settings);
+        // Last-resort cap so a tab that hangs somewhere unexpected is reported and skipped, not waited on forever.
+        const r = await withTimeout(captureTab(tab, opts, settings), 150000, 'Saving tab');
         if (r.ok) {
           progress.saved++;
           if (r.snapshot) progress.snapshots++;
@@ -234,7 +243,7 @@ export async function saveTabs(tabs, opts = {}) {
   };
   try {
     await Promise.all(Array.from({ length: Math.min(4, tabs.length) }, worker));
-    if (toClose.length) await closeSafely(toClose);
+    if (toClose.length) await withTimeout(closeSafely(toClose), 30000, 'Closing tabs').catch(e => progress.errors.push(e.message));
     if (settings.screenshots && settings.screenshotAll) {
       for (const t of shownBefore) await chrome.tabs.update(t.id, { active: true }).catch(() => {}); // fails harmlessly if it was closed
     }
